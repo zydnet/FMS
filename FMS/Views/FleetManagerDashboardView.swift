@@ -4,7 +4,19 @@ public struct FleetManagerDashboardView: View {
     public init() {}
     
     public var body: some View {
-        FleetManagerHomeTab()
+        FMSTabShell {
+            FMSTabItem(id: "home", title: "Home", icon: "house.fill") {
+                FleetManagerHomeTab()
+            }
+            FMSTabItem(id: "fleet", title: "Fleet", icon: "truck.box.fill") {
+                // TODO: Fleet tab
+                Text("Fleet")
+            }
+            FMSTabItem(id: "drivers", title: "Drivers", icon: "person.2.fill") {
+                // TODO: Drivers tab
+                Text("Drivers")
+            }
+        }
     }
 }
 
