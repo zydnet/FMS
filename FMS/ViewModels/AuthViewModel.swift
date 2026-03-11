@@ -18,12 +18,24 @@ public class AuthViewModel {
         self.isAuthenticated = isAuthenticated
     }
     
-    public func login(email: String, password: String) async {
+    public func login(email: String, password: String, bannerManager: BannerManager) async {
+        // Input validation
+        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+            await bannerManager.show(type: .error, message: "Please enter your email address.")
+            return
+        }
+        
+        guard email.contains("@") && email.contains(".") else {
+            await bannerManager.show(type: .error, message: "Please enter a valid email address.")
+            return
+        }
+        
+        guard !password.isEmpty else {
+            await bannerManager.show(type: .error, message: "Please enter your password.")
+            return
+        }
+        
         do {
-            // Note for testing: Since dummy emails were used without confirmation, 
-            // auth.signIn() will fail with "Email not confirmed". We bypass Supabase Auth 
-            // for now and directly query the role from `public.users` matching the email.
-            
             struct UserRoleQuery: Decodable {
                 let role: String
             }
@@ -51,10 +63,10 @@ public class AuthViewModel {
                     self.isAuthenticated = true
                 }
             } else {
-                print("No user found with email \(email)")
+                await bannerManager.show(type: .error, message: "Invalid email or password. Please try again.")
             }
         } catch {
-            print("Login failed: \(error)")
+            await bannerManager.show(type: .error, message: "Connection failed. Please check your network and try again.")
         }
     }
     

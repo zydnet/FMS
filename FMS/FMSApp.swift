@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct FMSApp: App {
     @State private var authViewModel = AuthViewModel()
+    @State private var bannerManager = BannerManager()
     
     var body: some Scene {
         WindowGroup {
@@ -20,7 +21,11 @@ struct FMSApp: App {
                     MainDashboardView()
                 }
             }
+            .overlay(alignment: .top) {
+                FMSBanner()
+            }
             .environment(authViewModel)
+            .environment(bannerManager)
         }
     }
 }

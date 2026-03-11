@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct LoginView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(BannerManager.self) private var bannerManager
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var email: String = ""
@@ -110,7 +111,7 @@ public struct LoginView: View {
                 Spacer()
                 
                 // Footer
-                Text("© © 2026 FLEETPRO SYSTEMS")
+                Text("© 2026 FLEETPRO SYSTEMS")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(labelColor)
                     .tracking(1.0)
@@ -123,7 +124,7 @@ public struct LoginView: View {
         isLoading = true
         
         Task {
-            await authViewModel.login(email: email, password: password)
+            await authViewModel.login(email: email, password: password, bannerManager: bannerManager)
             await MainActor.run {
                 isLoading = false
             }
@@ -134,11 +135,13 @@ public struct LoginView: View {
 #Preview("Light Mode") {
     LoginView()
         .environment(AuthViewModel())
+        .environment(BannerManager())
         .colorScheme(.light)
 }
 
 #Preview("Dark Mode") {
     LoginView()
         .environment(AuthViewModel())
+        .environment(BannerManager())
         .colorScheme(.dark)
 }
