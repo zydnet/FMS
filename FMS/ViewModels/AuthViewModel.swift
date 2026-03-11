@@ -36,6 +36,13 @@ public class AuthViewModel {
         }
         
         do {
+            // Authenticate via Supabase Auth to validate password
+            try await SupabaseService.shared.client.auth.signIn(
+                email: email,
+                password: password
+            )
+            
+            // Fetch role from public.users table
             struct UserRoleQuery: Decodable {
                 let role: String
             }
@@ -63,10 +70,10 @@ public class AuthViewModel {
                     self.isAuthenticated = true
                 }
             } else {
-                await bannerManager.show(type: .error, message: "Invalid email or password. Please try again.")
+                await bannerManager.show(type: .error, message: "Account not configured. Please contact admin.")
             }
         } catch {
-            await bannerManager.show(type: .error, message: "Connection failed. Please check your network and try again.")
+            await bannerManager.show(type: .error, message: "Invalid email or password. Please try again.")
         }
     }
     
