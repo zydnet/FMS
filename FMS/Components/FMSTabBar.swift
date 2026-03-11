@@ -16,7 +16,7 @@ public struct FMSTabItem<Content: View>: Identifiable {
     }
 }
 
-/// A role-agnostic tab shell that wraps the native `TabView`.
+/// A role-based tab shell that wraps the native `TabView`.
 /// Each role provides its own set of `FMSTabItem`s — the shell handles
 /// tinting and the system liquid glass tab bar on iOS 26+.
 ///
@@ -34,17 +34,10 @@ public struct FMSTabShell: View {
     public var body: some View {
         TabView {
             ForEach(tabs) { tab in
-                // iOS 18+ Tab API
-                if #available(iOS 18, *) {
-                    Tab(tab.title, systemImage: tab.icon) {
-                        tab.content()
+                tab.content()
+                    .tabItem {
+                        Label(tab.title, systemImage: tab.icon)
                     }
-                } else {
-                    tab.content()
-                        .tabItem {
-                            Label(tab.title, systemImage: tab.icon)
-                        }
-                }
             }
         }
         .tint(FMSTheme.amber)
@@ -53,6 +46,7 @@ public struct FMSTabShell: View {
 
 // MARK: - Type Erasure Helper
 
+extension FMSTabItem {
     /// Type-erases the content view to AnyView for use in heterogeneous tab arrays.
     func erased() -> FMSTabItem<AnyView> {
         FMSTabItem<AnyView>(id: id, title: title, icon: icon) {
