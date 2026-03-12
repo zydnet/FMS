@@ -3,20 +3,12 @@ import SwiftUI
 public struct LoginView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(BannerManager.self) private var bannerManager
-    @Environment(\.colorScheme) private var colorScheme
     
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isLoading: Bool = false
     
-    // Adaptive colors
-    private var backgroundColor: Color {
-        colorScheme == .dark ? Color(red: 18/255, green: 18/255, blue: 20/255) : Color(red: 247/255, green: 247/255, blue: 249/255)
-    }
-    
-    private var textColor: Color {
-        colorScheme == .dark ? .white : Color(red: 30/255, green: 30/255, blue: 40/255)
-    }
+
     
     private let labelColor = Color(red: 130/255, green: 130/255, blue: 140/255)
     
@@ -24,7 +16,7 @@ public struct LoginView: View {
     
     public var body: some View {
         ZStack {
-            backgroundColor.ignoresSafeArea()
+            FMSTheme.backgroundPrimary.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Spacer()
@@ -45,7 +37,7 @@ public struct LoginView: View {
                 // App Title
                 Text("FleetPro")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(textColor)
+                    .foregroundColor(FMSTheme.textPrimary)
                     .padding(.bottom, 8)
                 
                 // Subtitle

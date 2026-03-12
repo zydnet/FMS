@@ -16,28 +16,13 @@ public struct TrackingShipmentView: View {
     @State private var previousDragTranslation: CGFloat = 0
     @State private var cameraPosition: MapCameraPosition = .automatic
     
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     
     private let minSheetHeight: CGFloat = 420
     private let maxSheetHeight: CGFloat = 520
     
-    // MARK: - Dynamic Theme Colors
-    private var dynamicBackground: Color {
-        colorScheme == .dark ? FMSTheme.obsidian : FMSTheme.backgroundPrimary
-    }
-    
-    private var dynamicCardBackground: Color {
-        colorScheme == .dark ? Color(UIColor.secondarySystemGroupedBackground) : FMSTheme.cardBackground
-    }
-    
-    private var dynamicTextPrimary: Color {
-        colorScheme == .dark ? .white : FMSTheme.textPrimary
-    }
-    
-    private var dynamicTextSecondary: Color {
-        colorScheme == .dark ? Color(UIColor.systemGray) : FMSTheme.textSecondary
-    }
+    // MARK: - Local theme properties have been removed since FMSTheme is now globally adaptive.
+
     
     public init() {}
     
@@ -64,8 +49,8 @@ public struct TrackingShipmentView: View {
                     Annotation("Destination", coordinate: dest) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.system(size: 38))
-                            .foregroundColor(colorScheme == .dark ? .white : FMSTheme.textPrimary)
-                            .background(Circle().fill(Color.white).frame(width: 14, height: 14))
+                            .foregroundColor(FMSTheme.textPrimary)
+                            .background(Circle().fill(FMSTheme.cardBackground).frame(width: 14, height: 14))
                     }
                 }
             }
@@ -75,9 +60,9 @@ public struct TrackingShipmentView: View {
             VStack {
                 LinearGradient(
                     colors: [
-                        dynamicBackground,
-                        dynamicBackground.opacity(0.9),
-                        dynamicBackground.opacity(0.4),
+                        FMSTheme.backgroundPrimary,
+                        FMSTheme.backgroundPrimary.opacity(0.9),
+                        FMSTheme.backgroundPrimary.opacity(0.4),
                         .clear
                     ],
                     startPoint: .top,
@@ -124,10 +109,10 @@ public struct TrackingShipmentView: View {
         }
         .frame(height: sheetHeight)
         .frame(maxWidth: .infinity)
-        .background(dynamicBackground)
+        .background(FMSTheme.backgroundPrimary)
         .fmsGlassEffect(cornerRadius: 32)
         .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.12), radius: 15, x: 0, y: -5)
+        .shadow(color: FMSTheme.shadowLarge, radius: 15, x: 0, y: -5)
         .gesture(
             DragGesture()
                 .onChanged { value in
@@ -164,11 +149,11 @@ public struct TrackingShipmentView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.driver?.name ?? "Unknown Driver")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(dynamicTextPrimary)
+                    .foregroundColor(FMSTheme.textPrimary)
                 
                 Text("Delivery Partner")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(dynamicTextSecondary)
+                    .foregroundColor(FMSTheme.textSecondary)
             }
             
             Spacer()
@@ -189,10 +174,10 @@ public struct TrackingShipmentView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Trip Number")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(dynamicTextSecondary)
+                    .foregroundColor(FMSTheme.textSecondary)
                 Text(viewModel.trip?.id ?? "N/A")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(dynamicTextPrimary)
+                    .foregroundColor(FMSTheme.textPrimary)
             }
             
             Spacer()
@@ -200,14 +185,14 @@ public struct TrackingShipmentView: View {
             VStack(alignment: .trailing, spacing: 6) {
                 Text("Estimated Date")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(dynamicTextSecondary)
+                    .foregroundColor(FMSTheme.textSecondary)
                 Text(viewModel.formattedEstimatedDate)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(dynamicTextPrimary)
+                    .foregroundColor(FMSTheme.textPrimary)
             }
         }
         .padding(20)
-        .background(dynamicCardBackground)
+        .background(FMSTheme.cardBackground)
         .cornerRadius(20)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
@@ -219,7 +204,7 @@ public struct TrackingShipmentView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Shipment Details")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(dynamicTextPrimary)
+                .foregroundColor(FMSTheme.textPrimary)
                 .padding(.bottom, 20)
             
             HStack(alignment: .top, spacing: 16) {
@@ -243,19 +228,19 @@ public struct TrackingShipmentView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Origin")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(dynamicTextSecondary)
+                            .foregroundColor(FMSTheme.textSecondary)
                         Text(viewModel.trip?.startName ?? "Unknown Origin")
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(dynamicTextPrimary)
+                            .foregroundColor(FMSTheme.textPrimary)
                     }
                     
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Deliver To")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(dynamicTextSecondary)
+                            .foregroundColor(FMSTheme.textSecondary)
                         Text(viewModel.trip?.endName ?? "Unknown Destination")
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(dynamicTextPrimary)
+                            .foregroundColor(FMSTheme.textPrimary)
                     }
                 }
             }

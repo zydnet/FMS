@@ -10,8 +10,6 @@ import SwiftUI
 
 struct VehicleListCard: View {
     let vehicle: Vehicle
-    @Environment(\.colorScheme) private var colorScheme
-    
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
@@ -21,7 +19,7 @@ struct VehicleListCard: View {
                 
                 Image(systemName: "box.truck.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .foregroundColor(FMSTheme.textPrimary)
             }
             
             // Center: Vehicle Details
@@ -33,12 +31,12 @@ struct VehicleListCard: View {
                 Text(fullName.isEmpty ? "Unknown Vehicle" : fullName)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(FMSTheme.textPrimary)
                     .lineLimit(1)
                 
                 Text(vehicle.plateNumber)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(FMSTheme.textSecondary)
             }
             
             Spacer(minLength: 8)
@@ -58,8 +56,8 @@ struct VehicleListCard: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemGroupedBackground) : .white)
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05), radius: 4, x: 0, y: 2)
+                .fill(FMSTheme.cardBackground)
+                .shadow(color: FMSTheme.shadowSmall, radius: 4, x: 0, y: 2)
         )
     }
     

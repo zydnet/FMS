@@ -11,24 +11,7 @@ public struct FMSTextField: View {
     
     @State private var isPasswordVisible: Bool = false
     
-    @Environment(\.colorScheme) private var colorScheme
-    
-    // Adaptive colors
-    private var textFieldBackground: Color {
-        colorScheme == .dark ? Color(red: 20/255, green: 20/255, blue: 25/255) : .white
-    }
-    private var labelColor: Color {
-        colorScheme == .dark ? Color(red: 170/255, green: 170/255, blue: 180/255) : Color(red: 130/255, green: 130/255, blue: 140/255)
-    }
-    private var placeholderColor: Color {
-        colorScheme == .dark ? Color(red: 160/255, green: 160/255, blue: 170/255) : Color(red: 130/255, green: 130/255, blue: 140/255)
-    }
-    private var borderColor: Color {
-        colorScheme == .dark ? Color(red: 40/255, green: 40/255, blue: 45/255) : Color(red: 230/255, green: 230/255, blue: 235/255)
-    }
-    private var textColor: Color {
-        colorScheme == .dark ? Color(red: 230/255, green: 230/255, blue: 235/255) : .black
-    }
+
     
     public init(
         label: String,
@@ -53,7 +36,7 @@ public struct FMSTextField: View {
             HStack {
                 Text(label.uppercased())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(labelColor)
+                    .foregroundColor(FMSTheme.textSecondary)
                     .tracking(0.5)
                 
                 Spacer()
@@ -70,17 +53,17 @@ public struct FMSTextField: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundColor(placeholderColor)
+                    .foregroundColor(FMSTheme.textTertiary)
                 
                 Group {
                     if isSecure && !isPasswordVisible {
-                        SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(placeholderColor))
+                        SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(FMSTheme.textTertiary))
                     } else {
-                        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(placeholderColor))
+                        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(FMSTheme.textTertiary))
                     }
                 }
                 .font(.system(size: 15))
-                .foregroundColor(textColor)
+                .foregroundColor(FMSTheme.textPrimary)
                 .autocorrectionDisabled()
                 
                 if isSecure {
@@ -89,17 +72,17 @@ public struct FMSTextField: View {
                     } label: {
                         Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
                             .font(.system(size: 16))
-                            .foregroundColor(placeholderColor)
+                            .foregroundColor(FMSTheme.textTertiary)
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(textFieldBackground)
+            .background(FMSTheme.cardBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 1)
+                    .stroke(FMSTheme.borderLight, lineWidth: 1)
             )
         }
     }
@@ -125,5 +108,5 @@ public struct FMSTextField: View {
         )
     }
     .padding()
-    .background(Color(red: 245/255, green: 245/255, blue: 247/255))
+    .background(FMSTheme.backgroundPrimary)
 }

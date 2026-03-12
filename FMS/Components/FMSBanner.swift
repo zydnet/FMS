@@ -2,8 +2,6 @@ import SwiftUI
 
 public struct FMSBanner: View {
     @Environment(BannerManager.self) private var bannerManager
-    @Environment(\.colorScheme) private var colorScheme
-    
     public init() {}
     
     private func accentColor(for type: BannerType) -> Color {
@@ -22,11 +20,7 @@ public struct FMSBanner: View {
         }
     }
     
-    private var bannerBackground: Color {
-        colorScheme == .dark
-            ? Color(red: 30/255, green: 30/255, blue: 35/255)
-            : .white
-    }
+
     
     public var body: some View {
         if let banner = bannerManager.currentBanner {
@@ -39,7 +33,7 @@ public struct FMSBanner: View {
                 
                 Text(banner.message)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(colorScheme == .dark ? Color(red: 220/255, green: 220/255, blue: 225/255) : FMSTheme.textPrimary)
+                    .foregroundColor(FMSTheme.textPrimary)
                     .lineLimit(2)
                 
                 Spacer()
@@ -54,7 +48,7 @@ public struct FMSBanner: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(bannerBackground)
+            .background(FMSTheme.cardBackground)
             .overlay(
                 Rectangle()
                     .fill(accent)
@@ -62,7 +56,7 @@ public struct FMSBanner: View {
                 alignment: .leading
             )
             .cornerRadius(12)
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.1), radius: 12, x: 0, y: 4)
+            .shadow(color: FMSTheme.shadowMedium, radius: 12, x: 0, y: 4)
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .transition(.move(edge: .top).combined(with: .opacity))
