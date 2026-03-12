@@ -31,12 +31,12 @@ struct VehicleListCard: View {
                 Text(fullName.isEmpty ? "Unknown Vehicle" : fullName)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(FMSTheme.textPrimary)
                     .lineLimit(1)
                 
                 Text(vehicle.plateNumber)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(FMSTheme.textSecondary)
             }
             
             Spacer(minLength: 8)
