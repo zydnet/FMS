@@ -7,12 +7,12 @@ public struct LiveTripCard: View {
     public let completionPercentage: Int
     
     // Theme colors matching the new aesthetics
-    private let cardBackground = Color.white
-    private let pillBackground = Color(red: 242/255, green: 242/255, blue: 247/255)
-    private let textPrimary = Color(red: 30/255, green: 30/255, blue: 35/255)
-    private let textSecondary = Color(red: 110/255, green: 110/255, blue: 120/255)
-    private let borderLight = Color(red: 235/255, green: 235/255, blue: 240/255)
-    private let symbolColor = Color(red: 80/255, green: 80/255, blue: 90/255) // Dark gray for the truck symbol
+    private let cardBackground = FMSTheme.cardBackground
+    private let pillBackground = FMSTheme.pillBackground
+    private let textPrimary = FMSTheme.textPrimary
+    private let textSecondary = FMSTheme.textSecondary
+    private let borderLight = FMSTheme.borderLight
+    private let symbolColor = FMSTheme.symbolColor
     
     public init(plateNumber: String, origin: String, destination: String, completionPercentage: Int) {
         self.plateNumber = plateNumber

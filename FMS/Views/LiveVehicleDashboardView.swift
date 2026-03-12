@@ -12,16 +12,11 @@ public struct LiveVehicleDashboardView: View {
     @State private var viewModel = LiveVehicleViewModel()
     @Environment(\.dismiss) private var dismiss
     
-    // Theme colors
-    private let background = Color(red: 250/255, green: 250/255, blue: 252/255)
-    private let textPrimary = Color(red: 30/255, green: 30/255, blue: 35/255)
-    private let textSecondary = Color(red: 110/255, green: 110/255, blue: 120/255)
-    
     public init() {}
     
     public var body: some View {
         ZStack(alignment: .top) {
-            background.ignoresSafeArea()
+            FMSTheme.backgroundPrimary.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Custom Navigation Header
@@ -32,24 +27,24 @@ public struct LiveVehicleDashboardView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(Color.white)
+                                .fill(FMSTheme.cardBackground)
                                 .frame(width: 48, height: 48)
-                                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+                                .shadow(color: FMSTheme.symbolBackground, radius: 8, x: 0, y: 4)
                             
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(textPrimary)
+                                .foregroundColor(FMSTheme.textPrimary)
                         }
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Active Vehicles")
                             .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(textPrimary)
+                            .foregroundColor(FMSTheme.textPrimary)
                         
                         Text("\(viewModel.filteredVehicles.isEmpty ? 14 : viewModel.filteredVehicles.count) Currently Active")
                             .font(.system(size: 14))
-                            .foregroundColor(textSecondary)
+                            .foregroundColor(FMSTheme.textSecondary)
                     }
                     
                     Spacer()

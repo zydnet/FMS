@@ -21,7 +21,7 @@ struct VehicleListCard: View {
                 
                 Image(systemName: "box.truck.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .foregroundColor(FMSTheme.textPrimary)
             }
             
             // Center: Vehicle Details
@@ -58,7 +58,7 @@ struct VehicleListCard: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemGroupedBackground) : .white)
+                .fill(FMSTheme.cardBackground)
                 .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05), radius: 4, x: 0, y: 2)
         )
     }
