@@ -2,8 +2,6 @@
 //  VehicleListCard.swift
 //  FMS
 //
-//  Created by Anish on 11/03/26.
-//
 
 import Foundation
 import SwiftUI
@@ -17,12 +15,7 @@ struct VehicleListCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 // Header Row (Plate Pill)
                 HStack(alignment: .top) {
-                    // Plate Number Pill
                     HStack(spacing: 6) {
-                        Circle()
-                            .fill(FMSTheme.statusColor(for: vehicle.status ?? ""))
-                            .frame(width: 8, height: 8)
-                        
                         Text(vehicle.plateNumber)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(FMSTheme.textPrimary)
@@ -33,6 +26,19 @@ struct VehicleListCard: View {
                     .cornerRadius(8)
                     
                     Spacer()
+                    
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(statusDotColor)
+                            .frame(width: 8, height: 8)
+                        Text(statusLabel)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(statusTextColor)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(statusPillBackground)
+                    .cornerRadius(10)
                 }
                 
                 // Details Rows
@@ -65,24 +71,19 @@ struct VehicleListCard: View {
                 
                 // Action Buttons
                 HStack(spacing: 12) {
-                    Button {
-                        // Tracking flow not wired yet.
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .rotationEffect(.degrees(45))
-                                .offset(x: -2, y: 2)
-                            Text("Track")
-                                .font(.system(size: 14, weight: .bold))
+                    if isTrackable {
+                        Button {
+                            // TODO: Wire tracking flow.
+                        } label: {
+                            trackLabel
                         }
-                        .foregroundColor(FMSTheme.obsidian)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 20)
-                        .background(FMSTheme.amber)
-                        .cornerRadius(10)
+                        .buttonStyle(.plain)
+                    } else {
+                        trackLabel
+                            .opacity(0.6)
+                            .allowsHitTesting(false)
+                            .accessibilityHint("Tracking is unavailable.")
                     }
-                    .disabled(true)
                 }
                 .padding(.top, 4)
             }
@@ -101,6 +102,76 @@ struct VehicleListCard: View {
         let model = vehicle.model ?? ""
         let fullName = "\(manufacturer) \(model)".trimmingCharacters(in: .whitespaces)
         return fullName.isEmpty ? "Unknown Vehicle" : fullName
+    }
+
+    private var statusLabel: String {
+        switch normalizedStatus {
+        case "active": return "On Trip"
+        case "maintenance": return "Maintenance"
+        case "inactive": return "In Yard"
+        default:
+            return cleanedStatus.capitalized
+        }
+    }
+    
+    private var statusPillBackground: Color {
+        switch normalizedStatus {
+        case "active": return FMSTheme.alertGreen.opacity(0.15)
+        case "maintenance": return FMSTheme.alertAmber.opacity(0.2)
+        case "inactive": return FMSTheme.textTertiary.opacity(0.15)
+        default: return FMSTheme.backgroundPrimary
+        }
+    }
+    
+    private var statusTextColor: Color {
+        switch normalizedStatus {
+        case "active": return FMSTheme.alertGreen
+        case "maintenance": return FMSTheme.alertAmber
+        case "inactive": return FMSTheme.textSecondary
+        default: return FMSTheme.textSecondary
+        }
+    }
+    
+    private var statusDotColor: Color {
+        switch normalizedStatus {
+        case "active": return FMSTheme.alertGreen
+        case "maintenance": return FMSTheme.alertAmber
+        case "inactive": return FMSTheme.textSecondary
+        default: return FMSTheme.textSecondary
+        }
+    }
+
+    private var normalizedStatus: String {
+        VehicleStatus.normalize(cleanedStatus)
+    }
+    
+    private var cleanedStatus: String {
+        let trimmed = vehicle.status?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let raw = trimmed.isEmpty ? "Unknown" : trimmed
+        return raw
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+    }
+    
+    private var isTrackable: Bool {
+        false
+    }
+    
+    private var trackLabel: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "location.fill")
+                .font(.system(size: 14, weight: .bold))
+                .rotationEffect(.degrees(45))
+                .offset(x: -2, y: 2)
+            Text("Track")
+                .font(.system(size: 14, weight: .bold))
+        }
+        .foregroundColor(FMSTheme.obsidian)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .background(FMSTheme.amber)
+        .cornerRadius(10)
+        .accessibilityLabel("Track")
     }
     
     

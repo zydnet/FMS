@@ -92,7 +92,15 @@ public struct FleetManagementView: View {
                 }
             }
             .navigationDestination(item: $selectedVehicle) { vehicle in
-                VehicleDetailView(vehicle: vehicle)
+                VehicleDetailView(
+                    vehicle: vehicle,
+                    onUpdate: { updatedVehicle in
+                        try await viewModel.updateVehicle(updatedVehicle)
+                    },
+                    onDelete: { vehicleId in
+                        try await viewModel.deleteVehicle(id: vehicleId)
+                    }
+                )
             }
         }
     }
@@ -146,17 +154,8 @@ public struct FleetManagementView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(
-            Group {
-                if #available(iOS 26, *) {
-                    FMSTheme.cardBackground.opacity(0.5)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-                } else {
-                    FMSTheme.cardBackground.opacity(0.5)
-                        .background(.ultraThinMaterial)
-                }
-            }
-        )
+        .background(FMSTheme.cardBackground.opacity(0.5))
+        .fmsGlassEffect(cornerRadius: 12)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -174,7 +173,8 @@ public struct FleetManagementView: View {
                 ForEach(viewModel.statusOptions, id: \.self) { status in
                     let count = status == "All" ? viewModel.vehicles.count : countForStatus(status)
                     FilterPill(
-                        title: status == "All" ? "All (\(count))" : "\(statusLabel(status)) (\(count))",
+                        title: status == "All" ? "All" : statusLabel(status),
+                        count: count,
                         statusKey: status,
                         isSelected: viewModel.selectedStatus == status,
                         action: {
@@ -194,7 +194,9 @@ public struct FleetManagementView: View {
 private extension FleetManagementView {
     func countForStatus(_ status: String) -> Int {
         let normalizedStatus = normalizeStatus(status)
-        return viewModel.vehicles.filter { normalizeStatus($0.status ?? "") == normalizedStatus }.count
+        return vehiclesMatchingSearch()
+            .filter { normalizeStatus($0.status ?? "") == normalizedStatus }
+            .count
     }
     
     func statusLabel(_ status: String) -> String {
@@ -209,11 +211,25 @@ private extension FleetManagementView {
     func normalizeStatus(_ status: String) -> String {
         VehicleStatus.normalize(status)
     }
+
+    func vehiclesMatchingSearch() -> [Vehicle] {
+        if viewModel.searchText.isEmpty {
+            return viewModel.vehicles
+        }
+        let searchLower = viewModel.searchText.lowercased()
+        return viewModel.vehicles.filter { vehicle in
+            let plate = vehicle.plateNumber.lowercased()
+            let make = (vehicle.manufacturer ?? "").lowercased()
+            let model = (vehicle.model ?? "").lowercased()
+            return plate.contains(searchLower) || make.contains(searchLower) || model.contains(searchLower)
+        }
+    }
 }
 
 // MARK: - Subviews
 struct FilterPill: View {
     let title: String
+    let count: Int
     let statusKey: String
     let isSelected: Bool
     let action: () -> Void
@@ -241,6 +257,14 @@ struct FilterPill: View {
                 
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
+                
+                Text("\(count)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(FMSTheme.textPrimary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(FMSTheme.backgroundPrimary)
+                    .cornerRadius(20)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -250,14 +274,8 @@ struct FilterPill: View {
                     if isSelected {
                         FMSTheme.amber
                     } else {
-                        if #available(iOS 26, *) {
-                            FMSTheme.cardBackground.opacity(0.5)
-                                .glassEffect(.regular.interactive(), in: .capsule)
-                        } else {
-                            // Liquid glass effect fallback
-                            FMSTheme.cardBackground.opacity(0.5)
-                                .background(.ultraThinMaterial)
-                        }
+                        FMSTheme.cardBackground.opacity(0.5)
+                            .fmsGlassEffect(cornerRadius: 20)
                     }
                 }
             )

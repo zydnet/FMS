@@ -13,7 +13,6 @@ public class VehicleDetailViewModel {
     public var tripsErrorMessage: String? = nil
     public var workOrdersErrorMessage: String? = nil
     public var incidentsErrorMessage: String? = nil
-    
     public init() {}
     
     @MainActor
@@ -57,6 +56,7 @@ public class VehicleDetailViewModel {
             print("Error fetching trips: \(error)")
         }
     }
+
     
     @MainActor
     private func fetchWorkOrders(vehicleId: String) async {
