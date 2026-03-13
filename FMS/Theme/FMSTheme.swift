@@ -85,4 +85,20 @@ public struct FMSTheme {
     light: Color.black.opacity(0.14),
     dark: Color.black.opacity(0.4)
   )
+
+  // Status Colors Mapping
+  public static func statusColor(for status: String) -> Color {
+    switch status.lowercased() {
+    case "active", "completed", "delivered", "available", "on_route":
+      return alertGreen
+    case "maintenance", "repair", "in_progress", "en_route":
+      return alertAmber
+    case "pending", "scheduled", "inactive":
+      return alertYellow
+    case "failed", "cancelled", "offline", "out_of_service", "accident":
+      return alertRed
+    default:
+      return alertOrange
+    }
+  }
 }
