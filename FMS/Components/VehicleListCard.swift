@@ -2,8 +2,6 @@
 //  VehicleListCard.swift
 //  FMS
 //
-//  Created by Anish on 11/03/26.
-//
 
 import Foundation
 import SwiftUI
