@@ -86,22 +86,12 @@ struct EditDefectView: View {
                         }
 
                         Button {
-<<<<<<< HEAD
-                            guard !title.isEmpty, !vehicle.isEmpty else { return }
-                            defect.title       = title
-                            defect.vehicle     = vehicle
-=======
                             guard !title.isEmpty else { return }
                             defect.title       = title
->>>>>>> 8147c81 (Maintainace Module updated)
                             defect.category    = category
                             defect.priority    = priority
                             defect.description = description
                             Task {
-<<<<<<< HEAD
-                                try? await store.updateDefect(defect)
-                                await MainActor.run { dismiss() }
-=======
                                 do {
                                     try await store.updateDefect(defect)
                                     await MainActor.run { dismiss() }
@@ -111,7 +101,6 @@ struct EditDefectView: View {
                                         showUpdateError = true
                                     }
                                 }
->>>>>>> 8147c81 (Maintainace Module updated)
                             }
                         } label: {
                             Text("Save Changes").font(.system(size: 16, weight: .bold))

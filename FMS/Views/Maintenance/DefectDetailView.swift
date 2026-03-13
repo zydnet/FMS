@@ -195,23 +195,7 @@ struct DefectDetailView: View {
             EditDefectView(defect: $defect, store: store)
         }
         .sheet(isPresented: $showingCreateWO) {
-<<<<<<< HEAD
-            CreateWorkOrderView(prefillVehicle: defect.vehicle) { newWO in
-                Task {
-                    do {
-                        let insertedWO = try await woStore.addItem(WOItem(from: newWO))
-                        defect.linkedWorkOrderId = insertedWO.id
-                        do {
-                            try await store.update(defect)
-                        } catch {
-                            // rollback logic
-                            print("Error linking WO, rolling back..")
-                            _ = try? await woStore.delete(id: insertedWO.id) // Need to verify error / API of delete
-                            throw error
-                        }
-                    } catch {
-                        print("Error creating WO and linking to defect details: \(error)")
-=======
+
             CreateWorkOrderView(prefillVehicle: defect.vehicleId) { newWO in
                 let insertedWO = try await woStore.addItem(WOItem(from: newWO))
                 do {
@@ -219,7 +203,6 @@ struct DefectDetailView: View {
                     await MainActor.run {
                         defect.linkedWorkOrderId = insertedWO.id
                         defect.status = "in_progress"
->>>>>>> 8147c81 (Maintainace Module updated)
                     }
                 } catch {
                     print("Error linking WO \(insertedWO.id) to defect \(defect.id). Rolling back...")

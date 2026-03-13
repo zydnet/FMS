@@ -175,21 +175,6 @@ struct ReorderView: View {
 
                         Button {
                             Task {
-<<<<<<< HEAD
-                                do {
-                                    var didReorder = false
-                                    for part in lowParts {
-                                        if let q = Int(quantities[part.id] ?? ""), q > 0 {
-                                            try await store.reorder(part: part, quantity: q)
-                                            didReorder = true
-                                        }
-                                    }
-                                    if didReorder {
-                                        await MainActor.run { dismiss() }
-                                    }
-                                } catch {
-                                    print("Error bulk reordering: \(error)")
-=======
                                 var hasErrors = false
                                 var didReorder = false
                                 
@@ -215,7 +200,6 @@ struct ReorderView: View {
                                     } else if !didReorder {
                                         dismiss() // nothing ordered
                                     }
->>>>>>> 8147c81 (Maintainace Module updated)
                                 }
                             }
                         } label: {

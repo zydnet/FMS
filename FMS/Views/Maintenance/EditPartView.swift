@@ -70,16 +70,11 @@ struct EditPartView: View {
                             updatedPart.partNumber = partNumber.isEmpty ? updatedPart.partNumber : partNumber
                             if let s = Int(stock) { updatedPart.stock = s }
                             if let m = Int(minStock) { updatedPart.minStock = m }
-<<<<<<< HEAD
-                            updatedPart.unitCost = Double(unitCost)
-=======
-                            
                             if let c = Double(unitCost) {
                                 updatedPart.unitCost = c
                             } else if unitCost.trimmingCharacters(in: .whitespaces).isEmpty {
                                 updatedPart.unitCost = nil
                             }
->>>>>>> 8147c81 (Maintainace Module updated)
 
                             Task {
                                 do {
@@ -89,14 +84,10 @@ struct EditPartView: View {
                                         dismiss()
                                     }
                                 } catch {
-<<<<<<< HEAD
-                                    print("Error updating part: \(error)")
-=======
                                     await MainActor.run {
                                         updateError = error.localizedDescription
                                         showUpdateError = true
                                     }
->>>>>>> 8147c81 (Maintainace Module updated)
                                 }
                             }
                         } label: {

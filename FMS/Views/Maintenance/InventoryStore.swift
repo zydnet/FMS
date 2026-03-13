@@ -114,15 +114,6 @@ class InventoryStore {
     }
 
     func addPart(_ inv: PartsInventory, imageName: String = "cube.box.fill") async throws {
-<<<<<<< HEAD
-        try await SupabaseService.shared.client
-            .from("parts_inventory")
-            .insert(inv)
-            .execute()
-        
-        await MainActor.run {
-            let partItem = PartItem(from: inv, imageName: imageName)
-=======
         let inserted: [PartsInventory] = try await SupabaseService.shared.client
             .from("parts_inventory")
             .insert(inv)
@@ -136,7 +127,6 @@ class InventoryStore {
         
         await MainActor.run {
             let partItem = PartItem(from: dbPart, imageName: imageName)
->>>>>>> 8147c81 (Maintainace Module updated)
             self.imageMap[partItem.id] = imageName
             self.parts.append(partItem)
         }
@@ -173,17 +163,6 @@ class InventoryStore {
         let newStock = part.stock + quantity
         guard newStock >= 0 else { throw NSError(domain: "InventoryError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Stock cannot be negative"]) }
 
-<<<<<<< HEAD
-        try await SupabaseService.shared.client
-            .from("parts_inventory")
-            .update(["stock": newStock])
-            .eq("id", value: part.id)
-            .execute()
-        
-        await MainActor.run {
-            if let idx = self.parts.firstIndex(where: { $0.id == part.id }) {
-                self.parts[idx].stock = newStock
-=======
         let response: [PartsInventory] = try await SupabaseService.shared.client
             .from("parts_inventory")
             .update(["stock": newStock])
@@ -200,7 +179,6 @@ class InventoryStore {
         await MainActor.run {
             if let idx = self.parts.firstIndex(where: { $0.id == part.id }) {
                 self.parts[idx].stock = updatedPart.stock ?? newStock
->>>>>>> 8147c81 (Maintainace Module updated)
             }
         }
     }
