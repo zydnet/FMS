@@ -1,11 +1,25 @@
 import SwiftUI
 
 public struct VehicleDetailView: View {
-    let vehicle: Vehicle
+    @Environment(\.dismiss) private var dismiss
+    @Environment(BannerManager.self) private var bannerManager
+    @State private var currentVehicle: Vehicle
     @State private var viewModel = VehicleDetailViewModel()
+    private let onUpdate: (@MainActor (Vehicle) async throws -> Void)?
+    private let onDelete: (@MainActor (String) async throws -> Void)?
+    @State private var showingEditVehicle = false
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var navTarget: DetailSectionTarget? = nil
     
-    public init(vehicle: Vehicle) {
-        self.vehicle = vehicle
+    public init(
+        vehicle: Vehicle,
+        onUpdate: (@MainActor (Vehicle) async throws -> Void)? = nil,
+        onDelete: (@MainActor (String) async throws -> Void)? = nil
+    ) {
+        _currentVehicle = State(initialValue: vehicle)
+        self.onUpdate = onUpdate
+        self.onDelete = onDelete
     }
     
     public var body: some View {
@@ -15,7 +29,6 @@ public struct VehicleDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     headerBlock
-                    shiftStatusCard
                     currentTripSection
                     pastTripsSection
                     serviceSection
@@ -26,13 +39,86 @@ public struct VehicleDetailView: View {
                 .padding(.bottom, 24)
             }
         }
-        .navigationTitle(vehicle.plateNumber)
+        .navigationTitle(currentVehicle.plateNumber)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            if onUpdate != nil || onDelete != nil {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        if onUpdate != nil {
+                            Button {
+                                showingEditVehicle = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "pencil")
+                                    Text("Edit Vehicle")
+                                }
+                            }
+                            .tint(.white)
+                        }
+                        if onDelete != nil {
+                            Button(role: .destructive) {
+                                showingDeleteConfirm = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "trash")
+                                    Text("Delete Vehicle")
+                                }
+                            }
+                            .tint(.red)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(FMSTheme.textSecondary)
+                    }
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             bottomActions
         }
+        .navigationDestination(item: $navTarget) { target in
+            switch target {
+            case .pastTrips:
+                PastTripsListView(
+                    trips: pastTrips,
+                    isLoading: viewModel.isLoadingTrips,
+                    errorMessage: viewModel.tripsErrorMessage
+                )
+            case .serviceHistory:
+                ServiceHistoryListView(
+                    workOrders: viewModel.workOrders,
+                    isLoading: viewModel.isLoadingWorkOrders,
+                    errorMessage: viewModel.workOrdersErrorMessage
+                )
+            case .incidents:
+                IncidentsListView(
+                    incidents: viewModel.incidents,
+                    isLoading: viewModel.isLoadingEvents,
+                    errorMessage: viewModel.incidentsErrorMessage
+                )
+            }
+        }
         .task {
-            await viewModel.fetch(vehicleId: vehicle.id)
+            await viewModel.fetch(vehicleId: currentVehicle.id)
+        }
+        .sheet(isPresented: $showingEditVehicle) {
+            AddVehicleView(vehicle: currentVehicle) { updatedVehicle in
+                guard let onUpdate else { return }
+                try await onUpdate(updatedVehicle)
+                await MainActor.run {
+                    currentVehicle = updatedVehicle
+                }
+            }
+        }
+        .alert("Delete Vehicle?", isPresented: $showingDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteVehicle() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently remove \(currentVehicle.plateNumber) and its related records.")
         }
     }
     
@@ -44,38 +130,33 @@ public struct VehicleDetailView: View {
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(FMSTheme.textPrimary)
                     
-                    Text(vehicle.plateNumber)
+                    Text(currentVehicle.plateNumber)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(FMSTheme.textSecondary)
                     
-                    Text("VIN: \(vehicle.chassisNumber)")
+                    Text("VIN: \(currentVehicle.chassisNumber)")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(FMSTheme.textSecondary)
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(FMSTheme.statusColor(for: vehicle.status ?? ""))
-                        .frame(width: 8, height: 8)
-                    Text((vehicle.status ?? "Unknown").uppercased())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(FMSTheme.textSecondary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(FMSTheme.backgroundPrimary)
-                .cornerRadius(8)
+                Text(vehicleStatusLabel)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(vehicleStatusTextColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(vehicleStatusBackground)
+                    .cornerRadius(10)
             }
             
             Divider()
                 .overlay(FMSTheme.borderLight)
             
-            detailRow(title: "Make", value: vehicle.manufacturer ?? "Unknown")
-            detailRow(title: "Model", value: vehicle.model ?? "Unknown")
-            detailRow(title: "Fuel Type", value: vehicle.fuelType.capitalized)
-            detailRow(title: "Fuel Tank", value: "\(Int(vehicle.fuelTankCapacity)) L")
+            detailRow(title: "Make", value: currentVehicle.manufacturer ?? "Unknown")
+            detailRow(title: "Model", value: currentVehicle.model ?? "Unknown")
+            detailRow(title: "Fuel Type", value: currentVehicle.fuelType.capitalized)
+            detailRow(title: "Fuel Tank", value: "\(Int(currentVehicle.fuelTankCapacity)) L")
             detailRow(title: "Carrying Capacity", value: capacityText)
             detailRow(title: "Odometer", value: odometerText)
         }
@@ -85,150 +166,87 @@ public struct VehicleDetailView: View {
         .shadow(color: FMSTheme.shadowSmall, radius: 6, x: 0, y: 4)
     }
     
-    private var shiftStatusCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Shift Status")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(FMSTheme.textPrimary)
-            
-            if let error = viewModel.tripsErrorMessage {
-                errorCard(text: "Unable to load trip status.\n\(error)")
-            } else if let trip = activeOrLatestTrip {
-                HStack {
-                    Text(tripRoute(trip))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(FMSTheme.textSecondary)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(tripStatusText(trip))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(FMSTheme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(FMSTheme.backgroundPrimary)
-                        .cornerRadius(6)
-                }
-                
-                ProgressView(value: shiftProgress(trip))
-                    .progressViewStyle(LinearProgressViewStyle(tint: FMSTheme.amber))
-                    .background(FMSTheme.borderLight)
-                    .clipShape(Capsule())
-                
-                HStack {
-                    Text(tripTimeWindowText(trip))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(FMSTheme.textTertiary)
-                    Spacer()
-                    Text(tripDurationText(trip))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(FMSTheme.textTertiary)
-                }
-            } else {
-                Text("No recent trips found.")
-                    .font(.system(size: 14))
-                    .foregroundColor(FMSTheme.textTertiary)
-            }
-        }
-        .padding(16)
-        .background(FMSTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: FMSTheme.shadowSmall, radius: 6, x: 0, y: 4)
-    }
     
     private var currentTripSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Current Trip", count: currentTrip == nil ? 0 : 1, isLoading: viewModel.isLoadingTrips)
-            
-            if viewModel.isLoadingTrips {
-                loadingCard(text: "Loading current trip...")
-            } else if let error = viewModel.tripsErrorMessage {
-                errorCard(text: "Unable to load current trip.\n\(error)")
-            } else if let trip = currentTrip {
-                tripCard(trip)
-            } else {
-                emptyCard(text: "No active trip.")
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Current Trip")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(FMSTheme.textPrimary)
+                    Spacer()
+                    if viewModel.isLoadingTrips {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: FMSTheme.textSecondary))
+                    }
+                }
+                
+                if viewModel.isLoadingTrips {
+                    Text("Loading current trip...")
+                        .font(.system(size: 14))
+                        .foregroundColor(FMSTheme.textSecondary)
+                } else if let error = viewModel.tripsErrorMessage {
+                    errorCard(text: "Unable to load current trip.\n\(error)")
+                } else if let trip = currentTrip {
+                    tripCardContent(trip)
+                } else {
+                    Text("No active trip.")
+                        .font(.system(size: 14))
+                        .foregroundColor(FMSTheme.textTertiary)
+                }
             }
+            .padding(16)
+            .background(FMSTheme.cardBackground)
+            .cornerRadius(16)
+            .shadow(color: FMSTheme.shadowSmall, radius: 6, x: 0, y: 4)
         }
     }
     
     private var pastTripsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Past Trips", count: pastTrips.count, isLoading: viewModel.isLoadingTrips)
-            
-            if viewModel.isLoadingTrips {
-                loadingCard(text: "Loading trips...")
-            } else if let error = viewModel.tripsErrorMessage {
-                errorCard(text: "Unable to load past trips.\n\(error)")
-            } else if pastTrips.isEmpty {
-                emptyCard(text: "No past trips found.")
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(pastTrips) { trip in
-                        tripCard(trip)
-                    }
-                }
-            }
-        }
+        navigationCard(
+            title: "Past Trips",
+            count: pastTrips.count,
+            isLoading: viewModel.isLoadingTrips,
+            target: .pastTrips
+        )
     }
     
     private var serviceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Service History", count: viewModel.workOrders.count, isLoading: viewModel.isLoadingWorkOrders)
-            
-            if viewModel.isLoadingWorkOrders {
-                loadingCard(text: "Loading service history...")
-            } else if let error = viewModel.workOrdersErrorMessage {
-                errorCard(text: "Unable to load service history.\n\(error)")
-            } else if viewModel.workOrders.isEmpty {
-                emptyCard(text: "No service history found.")
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(viewModel.workOrders) { order in
-                        serviceCard(order)
-                    }
-                }
-            }
-        }
+        navigationCard(
+            title: "Service History",
+            count: viewModel.workOrders.count,
+            isLoading: viewModel.isLoadingWorkOrders,
+            target: .serviceHistory
+        )
     }
     
     private var incidentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Incidents", count: viewModel.incidents.count, isLoading: viewModel.isLoadingEvents)
-            
-            if viewModel.isLoadingEvents {
-                loadingCard(text: "Loading incidents...")
-            } else if let error = viewModel.incidentsErrorMessage {
-                errorCard(text: "Unable to load incidents.\n\(error)")
-            } else if viewModel.incidents.isEmpty {
-                emptyCard(text: "No incidents reported.")
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(viewModel.incidents) { incident in
-                        incidentCard(incident)
-                    }
-                }
-            }
-        }
+        navigationCard(
+            title: "Incidents",
+            count: viewModel.incidents.count,
+            isLoading: viewModel.isLoadingEvents,
+            target: .incidents
+        )
     }
     
     private func tripCard(_ trip: Trip) -> some View {
+        tripCardContent(trip)
+            .padding(14)
+            .background(FMSTheme.cardBackground)
+            .cornerRadius(14)
+            .shadow(color: FMSTheme.shadowSmall, radius: 4, x: 0, y: 3)
+    }
+
+    private func tripCardContent(_ trip: Trip) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(tripRoute(trip))
+                Text(trip.displayTitle)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(FMSTheme.textPrimary)
                     .lineLimit(1)
-                
-                Spacer()
-                
-                Text(tripStatusText(trip))
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(FMSTheme.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(FMSTheme.backgroundPrimary)
-                    .cornerRadius(6)
             }
+
+            tripRouteRow(trip)
             
             HStack(spacing: 14) {
                 infoPill(icon: "calendar", text: tripDateText(trip))
@@ -236,10 +254,6 @@ public struct VehicleDetailView: View {
                 infoPill(icon: "clock.fill", text: tripDurationText(trip))
             }
         }
-        .padding(14)
-        .background(FMSTheme.cardBackground)
-        .cornerRadius(14)
-        .shadow(color: FMSTheme.shadowSmall, radius: 4, x: 0, y: 3)
     }
     
     private func serviceCard(_ order: MaintenanceWorkOrder) -> some View {
@@ -280,7 +294,7 @@ public struct VehicleDetailView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(FMSTheme.textPrimary)
                 Spacer()
-                Text((incident.severity ?? "Unknown").uppercased())
+                Text(humanize(incident.severity ?? "Unknown").uppercased())
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(FMSTheme.textSecondary)
                     .padding(.horizontal, 8)
@@ -318,6 +332,44 @@ public struct VehicleDetailView: View {
                     .cornerRadius(6)
             }
         }
+    }
+
+    private func navigationCard(
+        title: String,
+        count: Int,
+        isLoading: Bool,
+        target: DetailSectionTarget
+    ) -> some View {
+        Button {
+            navTarget = target
+        } label: {
+            HStack {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(FMSTheme.textPrimary)
+                Spacer()
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: FMSTheme.textSecondary))
+                } else {
+                    Text("\(count)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(FMSTheme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(FMSTheme.backgroundPrimary)
+                        .cornerRadius(6)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(FMSTheme.textTertiary)
+            }
+            .padding(16)
+            .background(FMSTheme.cardBackground)
+            .cornerRadius(16)
+            .shadow(color: FMSTheme.shadowSmall, radius: 6, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
     }
     
     private func detailRow(title: String, value: String) -> some View {
@@ -431,26 +483,84 @@ public struct VehicleDetailView: View {
     }
     
     private var vehicleName: String {
-        let make = vehicle.manufacturer ?? ""
-        let model = vehicle.model ?? ""
+        let make = currentVehicle.manufacturer ?? ""
+        let model = currentVehicle.model ?? ""
         let fullName = "\(make) \(model)".trimmingCharacters(in: .whitespaces)
         return fullName.isEmpty ? "Unknown Vehicle" : fullName
     }
+
+    private var vehicleStatusLabel: String {
+        let normalized = VehicleStatus.normalize(currentVehicle.status ?? "")
+        switch normalized {
+        case "active": return "On Trip"
+        case "maintenance": return "Maintenance"
+        case "inactive": return "In Yard"
+        default: return (currentVehicle.status ?? "Unknown").capitalized
+        }
+    }
+    
+    private var vehicleStatusBackground: Color {
+        let normalized = VehicleStatus.normalize(currentVehicle.status ?? "")
+        switch normalized {
+        case "active": return FMSTheme.alertGreen.opacity(0.15)
+        case "maintenance": return FMSTheme.alertAmber.opacity(0.2)
+        case "inactive": return FMSTheme.textTertiary.opacity(0.15)
+        default: return FMSTheme.backgroundPrimary
+        }
+    }
+    
+    private var vehicleStatusTextColor: Color {
+        let normalized = VehicleStatus.normalize(currentVehicle.status ?? "")
+        switch normalized {
+        case "active": return FMSTheme.alertGreen
+        case "maintenance": return FMSTheme.alertAmber
+        case "inactive": return FMSTheme.textSecondary
+        default: return FMSTheme.textSecondary
+        }
+    }
     
     private var capacityText: String {
-        guard let capacity = vehicle.carryingCapacity else { return "Unknown" }
+        guard let capacity = currentVehicle.carryingCapacity else { return "Unknown" }
         return "\(Int(capacity)) kg"
     }
     
     private var odometerText: String {
-        guard let odometer = vehicle.odometer else { return "Unknown" }
+        guard let odometer = currentVehicle.odometer else { return "Unknown" }
         return "\(Int(odometer)) km"
     }
     
+    private func tripTitleText(_ trip: Trip) -> String {
+        trip.displayTitle
+    }
+    
     private func tripRoute(_ trip: Trip) -> String {
-        let start = trip.startName ?? "Start"
-        let end = trip.endName ?? "End"
-        return "\(start) -> \(end)"
+        trip.displayRoute
+    }
+
+    private func tripRouteRow(_ trip: Trip) -> some View {
+        let texts = trip.routeTexts
+
+        return HStack(spacing: 8) {
+            Text(texts.startText)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(FMSTheme.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "arrow.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(FMSTheme.textTertiary)
+
+            Spacer(minLength: 8)
+
+            Text(texts.endText)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(FMSTheme.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
     
     private func tripDateText(_ trip: Trip) -> String {
@@ -488,6 +598,7 @@ public struct VehicleDetailView: View {
     private func tripStatusText(_ trip: Trip) -> String {
         (trip.status ?? "Unknown").uppercased()
     }
+
     
     private func workOrderDateText(_ order: MaintenanceWorkOrder) -> String {
         let date = order.completedAt ?? order.createdAt
@@ -501,18 +612,12 @@ public struct VehicleDetailView: View {
     
     private func incidentTitle(_ incident: Incident) -> String {
         let severity = incident.severity?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return severity?.isEmpty == false ? severity! : "Incident"
+        return humanize(severity?.isEmpty == false ? severity! : "Incident")
     }
     
     private func incidentTimeText(_ incident: Incident) -> String {
         formatDate(incident.createdAt) ?? "Unknown"
     }
-    
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM yyyy"
-        return formatter
-    }()
     
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -521,8 +626,7 @@ public struct VehicleDetailView: View {
     }()
     
     private func formatDate(_ date: Date?) -> String? {
-        guard let date else { return nil }
-        return Self.dateFormatter.string(from: date)
+        SharedFormatting.formatDate(date)
     }
     
     private func formatTime(_ date: Date?) -> String? {
@@ -545,17 +649,32 @@ public struct VehicleDetailView: View {
         return viewModel.trips
     }
     
-    private var activeOrLatestTrip: Trip? {
-        currentTrip ?? viewModel.trips.first
+
+    private func humanize(_ value: String) -> String {
+        SharedFormatting.humanize(value)
     }
+
+    @MainActor
+    private func deleteVehicle() async {
+        guard !isDeleting else { return }
+        guard let onDelete else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await onDelete(currentVehicle.id)
+            dismiss()
+        } catch {
+            bannerManager.show(type: .error, message: "Failed to delete vehicle. Please try again.")
+        }
+    }
+}
+
+enum DetailSectionTarget: String, Identifiable {
+    case pastTrips
+    case serviceHistory
+    case incidents
     
-    private func shiftProgress(_ trip: Trip) -> Double {
-        guard let start = trip.startTime else { return 0 }
-        guard let estimated = trip.estimatedDurationMin, estimated > 0 else { return 0 }
-        let elapsed = Date().timeIntervalSince(start) / 60.0
-        let progress = elapsed / Double(estimated)
-        return max(0, min(progress, 1))
-    }
+    var id: String { rawValue }
 }
 
 #Preview {

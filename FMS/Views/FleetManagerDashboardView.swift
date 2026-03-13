@@ -84,11 +84,7 @@ struct FleetManagerHomeTab: View {
             .navigationDestination(isPresented: $navigateToLiveFleet) {
                 LiveVehicleDashboardView()
             }
-            .fullScreenCover(isPresented: $navigateToPreTrip) {
-                InspectionChecklistView(type: .preTrip)
-            }
-            .fullScreenCover(isPresented: $navigateToPostTrip) {
-                InspectionChecklistView(type: .postTrip)
+ 
             }
         }
     }
@@ -108,15 +104,19 @@ struct FleetManagerHomeTab: View {
             
             Spacer()
             
-            ZStack {
-                Circle()
-                    .fill(FMSTheme.borderLight)
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(FMSTheme.textTertiary)
+            Button {
+                navigateToProfile = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(FMSTheme.borderLight)
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(FMSTheme.amber)
+                }
             }
+            .buttonStyle(.plain)
         }
     }
     
