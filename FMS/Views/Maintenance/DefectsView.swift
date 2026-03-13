@@ -185,13 +185,8 @@ struct DefectCardView: View {
                         .font(.system(size: 11))
                         .foregroundColor(FMSTheme.textTertiary)
                     
-<<<<<<< HEAD
-                    let parts = defect.vehicle.components(separatedBy: " · ")
-                    let plate = parts.count > 1 ? parts.last! : defect.vehicle
-=======
                     let parts = defect.vehicleDisplay.components(separatedBy: " · ")
                     let plate = parts.count > 1 ? parts.last! : defect.vehicleDisplay
->>>>>>> 8147c81 (Maintainace Module updated)
                     
                     Text(plate)
                         .font(.system(size: 12, weight: .medium))
@@ -239,22 +234,6 @@ struct DefectCardView: View {
         )
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
         .sheet(isPresented: $showingCreateWO) {
-<<<<<<< HEAD
-            CreateWorkOrderView(prefillVehicle: defect.vehicle) { newWO in
-                Task {
-                    do {
-                        let insertedWO = try await woStore.addItem(WOItem(from: newWO))
-                        // Now physically link it in Supabase since WO exists
-                        var updatedDefect = defect
-                        updatedDefect.linkedWorkOrderId = insertedWO.id
-                        try await store.update(updatedDefect)
-                        await MainActor.run {
-                            defect = updatedDefect
-                        }
-                    } catch {
-                        print("Failed to cascade WO insertion to defect link: \(error)")
-                    }
-=======
             CreateWorkOrderView(prefillVehicle: defect.vehicleId) { newWO in
                 let insertedWO = try await woStore.addItem(WOItem(from: newWO))
                 // Use atomic link API explicitly
@@ -262,7 +241,6 @@ struct DefectCardView: View {
                 await MainActor.run {
                     defect.linkedWorkOrderId = insertedWO.id
                     defect.status = "in_progress"
->>>>>>> 8147c81 (Maintainace Module updated)
                 }
             }
         }

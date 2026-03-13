@@ -303,11 +303,7 @@ struct WODetailView: View {
                                             Task {
                                                 do {
                                                     try await invStore.reorder(part: selectedItem, quantity: -qty)
-<<<<<<< HEAD
-                                                    store.addPartUsed(part, to: wo.id)
-=======
                                                     try await store.addPartUsed(part, to: wo.id)
->>>>>>> 8147c81 (Maintainace Module updated)
                                                     await MainActor.run {
                                                         withAnimation { wo.partsUsed.append(part) }
                                                         // Reset

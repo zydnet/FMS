@@ -6,13 +6,8 @@ import SwiftUI
 
 public struct MaintenanceDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
-<<<<<<< HEAD
-    @State var woStore: WorkOrderStore
-    @State var invStore = InventoryStore()
-=======
     var woStore: WorkOrderStore
     var invStore: InventoryStore
->>>>>>> 8147c81 (Maintainace Module updated)
     @State private var showingCreateWO = false
     @State private var selectedFilter  = "All"
     
@@ -361,11 +356,6 @@ struct DashWOCard: View {
 // MARK: - Previews
 // ─────────────────────────────────────────────
 
-<<<<<<< HEAD
-#Preview("Light") { MaintenanceDashboardView(woStore: WorkOrderStore()) }
-#Preview("Dark")  { MaintenanceDashboardView(woStore: WorkOrderStore()).colorScheme(.dark) }
-=======
 #Preview("Light") { MaintenanceDashboardView(woStore: WorkOrderStore(), invStore: InventoryStore()) }
 #Preview("Dark")  { MaintenanceDashboardView(woStore: WorkOrderStore(), invStore: InventoryStore()).colorScheme(.dark) }
->>>>>>> 8147c81 (Maintainace Module updated)
 

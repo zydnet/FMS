@@ -143,21 +143,13 @@ class DefectStore {
             
             for i in mappedItems.indices {
                 // Map the vehicle UUID to a readable name matching WorkOrderStore
-<<<<<<< HEAD
-                let originalId = mappedItems[i].vehicle
-=======
                 let originalId = mappedItems[i].vehicleId
->>>>>>> 8147c81 (Maintainace Module updated)
                 if let matchedVehicle = fetchedVehicles.first(where: { $0.id == originalId }) {
                     let make = matchedVehicle.manufacturer ?? "Unknown"
                     let model = matchedVehicle.model ?? "Vehicle"
                     let plate = matchedVehicle.plateNumber
                     
-<<<<<<< HEAD
-                    mappedItems[i].vehicle = "\(make) \(model) · \(plate)".trimmingCharacters(in: .whitespaces)
-=======
                     mappedItems[i].vehicleDisplay = "\(make) \(model) · \(plate)".trimmingCharacters(in: .whitespaces)
->>>>>>> 8147c81 (Maintainace Module updated)
                 }
             }
 
@@ -225,21 +217,10 @@ class DefectStore {
             .eq("id", value: defectId.uuidString)
             .execute()
 
-<<<<<<< HEAD
-                await MainActor.run {
-                    if let idx = self.defects.firstIndex(where: { $0.id == defectId }) {
-                        self.defects[idx].linkedWorkOrderId = workOrderId
-                        self.defects[idx].status            = "in_progress"
-                    }
-                }
-            } catch {
-                print("Error linking WO to defect: \(error)")
-=======
         await MainActor.run {
             if let idx = self.defects.firstIndex(where: { $0.id == defectId }) {
                 self.defects[idx].linkedWorkOrderId = workOrderId
                 self.defects[idx].status            = "in_progress"
->>>>>>> 8147c81 (Maintainace Module updated)
             }
         }
     }
@@ -249,9 +230,5 @@ class DefectStore {
         try await addDefect(defect)
     };
     func update(_ defect: DefectItem) async throws { try await updateDefect(defect) }
-<<<<<<< HEAD
-    func delete(id: UUID) { deleteDefect(id: id) }
-=======
     func delete(id: UUID) async throws { try await deleteDefect(id: id) }
->>>>>>> 8147c81 (Maintainace Module updated)
 }

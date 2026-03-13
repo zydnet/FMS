@@ -208,11 +208,7 @@ struct ReportDefectView: View {
         let trimmedTitle = defectTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let newDefect = DefectItem(
             title:       trimmedTitle,
-<<<<<<< HEAD
-            vehicle:     selectedVehicleId,   // store UUID in vehicle field (maps to vehicle_id in DB)
-=======
             vehicleId:   selectedVehicleId,   // store UUID in vehicle field (maps to vehicle_id in DB)
->>>>>>> 8147c81 (Maintainace Module updated)
             category:    selectedCategory,
             priority:    selectedPriority,
             description: description,

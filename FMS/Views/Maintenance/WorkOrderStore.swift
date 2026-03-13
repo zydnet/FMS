@@ -222,35 +222,13 @@ class WorkOrderStore {
         return inserted
     }
 
-<<<<<<< HEAD
-    func updateStatus(_ id: String, status: WOItem.Status) {
-=======
     func updateStatus(_ id: String, status: WOItem.Status) async throws {
->>>>>>> 8147c81 (Maintainace Module updated)
         guard let idx = orders.firstIndex(where: { $0.id == id }) else { return }
         var updatedItem = orders[idx]
         updatedItem.status = status
         updatedItem.completedAt = (status == .completed) ? Date() : nil
         let dbModel = updatedItem.toMaintenanceWorkOrder()
         
-<<<<<<< HEAD
-        Task {
-            do {
-                try await SupabaseService.shared.client
-                    .from("maintenance_work_orders")
-                    .update(dbModel)
-                    .eq("id", value: dbModel.id)
-                    .execute()
-                
-                await MainActor.run {
-                    if let freshIdx = self.orders.firstIndex(where: { $0.id == id }) {
-                        self.orders[freshIdx].status = status
-                        self.orders[freshIdx].completedAt = updatedItem.completedAt
-                    }
-                }
-            } catch {
-                print("Error updating status in DB: \(error)")
-=======
         try await SupabaseService.shared.client
             .from("maintenance_work_orders")
             .update(dbModel)
@@ -261,7 +239,6 @@ class WorkOrderStore {
             if let freshIdx = self.orders.firstIndex(where: { $0.id == id }) {
                 self.orders[freshIdx].status = status
                 self.orders[freshIdx].completedAt = updatedItem.completedAt
->>>>>>> 8147c81 (Maintainace Module updated)
             }
         }
     }
@@ -289,46 +266,6 @@ class WorkOrderStore {
             .execute()
         await MainActor.run {
             self.orders.removeAll { $0.id == id }
-<<<<<<< HEAD
-        }
-    }
-
-    func addPartUsed(_ part: MaintenancePartsUsed, to woId: String) {
-        Task {
-            do {
-                try await SupabaseService.shared.client
-                    .from("maintenance_parts_used")
-                    .insert(part)
-                    .execute()
-                    
-                await MainActor.run {
-                    if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
-                        self.orders[idx].partsUsed.append(part)
-                    }
-                }
-            } catch {
-                print("Error adding part used to DB: \(error)")
-            }
-        }
-    }
-
-    func removePartUsed(_ partId: String, from woId: String) {
-        Task {
-            do {
-                try await SupabaseService.shared.client
-                    .from("maintenance_parts_used")
-                    .delete()
-                    .eq("id", value: partId)
-                    .execute()
-                    
-                await MainActor.run {
-                    if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
-                        self.orders[idx].partsUsed.removeAll { $0.id == partId }
-                    }
-                }
-            } catch {
-                print("Error removing part used from DB: \(error)")
-=======
         }
     }
 
@@ -355,7 +292,6 @@ class WorkOrderStore {
         await MainActor.run {
             if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
                 self.orders[idx].partsUsed.removeAll { $0.id == partId }
->>>>>>> 8147c81 (Maintainace Module updated)
             }
         }
     }

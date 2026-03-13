@@ -145,11 +145,7 @@ public struct ProfileTabView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(FMSTheme.textPrimary)
                     Spacer()
-<<<<<<< HEAD
-                    Toggle("", isOn: .constant(true))
-=======
                     Toggle("", isOn: $notificationsEnabled)
->>>>>>> 8147c81 (Maintainace Module updated)
                         .tint(FMSTheme.amber)
                 }
             }
