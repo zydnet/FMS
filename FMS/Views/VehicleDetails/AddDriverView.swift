@@ -54,9 +54,11 @@ private func fetchCountries() async throws -> [CountryDialCode] {
     } else {
       // Multiple suffixes: produce one entry per suffix so every regional prefix
       // is individually selectable (e.g. Russia "+7 9xx", Kazakhstan "+7 7xx").
+      // Store only the plain country name here — the picker row appends the code
+      // via "(\(country.code))", so embedding it in the name would double it.
       return suffixes.map { suffix in
         CountryDialCode(
-          name: "\(entry.name.common) (\(root)\(suffix))",
+          name: entry.name.common,
           code: root + suffix
         )
       }
@@ -78,6 +80,8 @@ private func saveCountriesToCache(_ countries: [CountryDialCode]) {
 }
 
 // MARK: - Main View
+// All color tokens are sourced from FMSTheme and are fully adaptive —
+// they resolve to their light or dark variant based on the system color scheme.
 struct AddDriverView: View {
   @Environment(\.dismiss) private var dismiss
 
@@ -102,6 +106,15 @@ struct AddDriverView: View {
   @State private var selectedCountry: CountryDialCode? = nil
   @State private var isLoadingCountries = false
 
+  /// Returns the fully-composed E.164 phone string only when the user has
+  /// entered at least one digit — preventing a bare dial code (e.g. "+91")
+  /// from being submitted when the phone field is empty.
+  private var composedPhone: String? {
+    let digits = phoneDigits.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !digits.isEmpty, let code = selectedCountry?.code else { return nil }
+    return "\(code)\(digits)"
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       // Custom Navigation Bar
@@ -109,17 +122,19 @@ struct AddDriverView: View {
         Button(action: { dismiss() }) {
           Text("Cancel")
             .font(.subheadline.weight(.semibold))
-            .foregroundColor(.red)
+            .foregroundColor(FMSTheme.textPrimary)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(Color(.secondarySystemBackground))
+            .background(FMSTheme.cardBackground)
             .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(FMSTheme.borderLight, lineWidth: 1))
         }
 
         Spacer()
 
         Button(action: {
-          viewModel.phone = "\(selectedCountry?.code ?? "+91")\(phoneDigits)"
+          guard let phone = composedPhone else { return }
+          viewModel.phone = phone
           Task {
             await viewModel.createDriver {
               dismiss()
@@ -127,27 +142,28 @@ struct AddDriverView: View {
             }
           }
         }) {
+          let canCreate = viewModel.isValid && composedPhone != nil
           Text("Create")
             .font(.subheadline.weight(.semibold))
-            .foregroundColor(viewModel.isValid ? FMSTheme.amber : Color(.tertiaryLabel))
+            .foregroundColor(canCreate ? FMSTheme.amber : Color(.tertiaryLabel))
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(viewModel.isValid ? FMSTheme.amber.opacity(0.15) : Color(.secondarySystemBackground))
+            .background(canCreate ? FMSTheme.amber.opacity(0.15) : FMSTheme.cardBackground)
             .clipShape(Capsule())
         }
-        .disabled(!viewModel.isValid || viewModel.isLoading)
+        .disabled(!viewModel.isValid || composedPhone == nil || viewModel.isLoading)
       }
       .padding(.horizontal, 16)
       .padding(.top, 24)
       .padding(.bottom, 16)
-      .background(Color(.systemBackground).shadow(color: .black.opacity(0.05), radius: 10, y: 5))
+      .background(FMSTheme.backgroundPrimary.shadow(color: .black.opacity(0.08), radius: 10, y: 5))
       .zIndex(1)
 
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           Text("Add Driver")
             .font(.title2.weight(.bold))
-            .foregroundStyle(Color(.label))
+            .foregroundStyle(FMSTheme.textPrimary)
             .padding(.horizontal, 16)
             .padding(.top, 8)
 
@@ -165,7 +181,7 @@ struct AddDriverView: View {
                 VStack(alignment: .leading, spacing: 6) {
                   Text("Phone Number")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color(.secondaryLabel))
+                    .foregroundStyle(FMSTheme.textSecondary)
 
                   HStack(spacing: 8) {
                     // Country Code Picker
@@ -186,29 +202,35 @@ struct AddDriverView: View {
                           ProgressView().scaleEffect(0.7)
                         } else {
                           Text(selectedCountry?.code ?? "...")
-                            .foregroundStyle(Color(.label))
+                            .foregroundStyle(FMSTheme.textPrimary)
                         }
                         Image(systemName: "chevron.down")
                           .font(.caption2)
-                          .foregroundStyle(Color.secondary)
+                          .foregroundStyle(FMSTheme.textSecondary)
                       }
                     }
 
-                    Divider().frame(height: 20)
+                    Divider()
+                      .frame(height: 20)
+                      .overlay(FMSTheme.borderLight)
 
                     // Numbers only phone field
                     TextField("", text: $phoneDigits)
                       .keyboardType(.phonePad)
+                      .foregroundStyle(FMSTheme.textPrimary)
                       .onChange(of: phoneDigits) { _, newValue in
                         phoneDigits = newValue.filter { $0.isNumber }
-                        viewModel.phone = "\(selectedCountry?.code ?? "+91")\(phoneDigits)"
+                        viewModel.phone = composedPhone ?? ""
                       }
                   } // HStack
                   .padding(14)
                   .background(
                     RoundedRectangle(cornerRadius: 12)
-                      .stroke(Color(.separator), lineWidth: 1)
-                      .background(Color(.systemBackground).cornerRadius(12))
+                      .fill(FMSTheme.cardBackground)
+                      .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                          .strokeBorder(FMSTheme.borderLight, lineWidth: 1)
+                      )
                   )
                 } // VStack Phone Group
               } // VStack Personal fields
@@ -222,7 +244,7 @@ struct AddDriverView: View {
                 VStack(alignment: .leading, spacing: 6) {
                   Text("License Expiry")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color(.secondaryLabel))
+                    .foregroundStyle(FMSTheme.textSecondary)
                   
                   DatePicker("", selection: $viewModel.licenseExpiry, displayedComponents: .date)
                     .labelsHidden()
@@ -230,8 +252,11 @@ struct AddDriverView: View {
                     .padding(14)
                     .background(
                       RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(.separator), lineWidth: 1)
-                        .background(Color(.systemBackground).cornerRadius(12))
+                        .fill(FMSTheme.cardBackground)
+                        .overlay(
+                          RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(FMSTheme.borderLight, lineWidth: 1)
+                        )
                     )
                 }
               }
@@ -243,9 +268,10 @@ struct AddDriverView: View {
 
         } // VStack scroll content
       } // ScrollView
-      .background(Color(.systemBackground))
+      .background(FMSTheme.backgroundPrimary)
 
     } // VStack root
+    .background(FMSTheme.backgroundPrimary.ignoresSafeArea())
     .alert("Error", isPresented: $viewModel.showError) {
       Button("OK", role: .cancel) {}
     } message: {
@@ -270,7 +296,7 @@ struct AddDriverView: View {
   private func loadCountries() async {
     if let cached = loadCountriesFromCache() {
       countries = cached
-      selectedCountry = cached.first(where: { $0.code == "+91" })
+      selectedCountry = cached.first(where: { $0.code == "+91" }) ?? cached.first
       return
     }
 
@@ -313,7 +339,7 @@ private struct SectionGroup<Content: View>: View {
           .frame(width: 4, height: 18)
         Text(title)
           .font(.headline)
-          .foregroundStyle(Color(.label))
+          .foregroundStyle(FMSTheme.textPrimary)
       }
       content
     }
@@ -329,13 +355,17 @@ private struct FormField: View {
     VStack(alignment: .leading, spacing: 6) {
       Text(label)
         .font(.footnote.weight(.semibold))
-        .foregroundStyle(Color(.secondaryLabel))
+        .foregroundStyle(FMSTheme.textSecondary)
       TextField(placeholder, text: $text)
+        .foregroundStyle(FMSTheme.textPrimary)
         .padding(14)
         .background(
           RoundedRectangle(cornerRadius: 12)
-            .stroke(Color(.separator), lineWidth: 1)
-            .background(Color(.systemBackground).cornerRadius(12))
+            .fill(FMSTheme.cardBackground)
+            .overlay(
+              RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(FMSTheme.borderLight, lineWidth: 1)
+            )
         )
     }
   }
