@@ -2,6 +2,7 @@ import SwiftUI
 internal import Auth
 import Supabase
 
+@MainActor
 struct AddPartView: View {
     /// Callback delivers a real PartsInventory ready for persistence
     let onAdd: (PartsInventory, String) -> Void  // (model, imageName)

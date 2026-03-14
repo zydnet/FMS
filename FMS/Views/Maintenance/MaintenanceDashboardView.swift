@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: - Dashboard View
 // ─────────────────────────────────────────────
 
+@MainActor
 public struct MaintenanceDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     var woStore: WorkOrderStore

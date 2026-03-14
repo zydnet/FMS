@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct CreateDefectView: View {
+@MainActor public struct CreateDefectView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AuthViewModel.self) private var authViewModel

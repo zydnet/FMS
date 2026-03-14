@@ -2,6 +2,7 @@ import SwiftUI
 internal import Auth
 import Supabase
 
+@MainActor
 struct CreateWorkOrderView: View {
     let prefillVehicle: String
     /// Callback delivers a real MaintenanceWorkOrder ready for persistence

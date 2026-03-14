@@ -130,36 +130,62 @@ struct WOItem: Identifiable {
 }
 
 // MARK: - Work Order Store
+@MainActor
 @Observable
 class WorkOrderStore {
     var orders: [WOItem] = []
     var isLoading: Bool = false
 
+    private var supabaseDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format: \(dateStr)")
+        }
+        return decoder
+    }
+
     func fetchWorkOrders() async {
-        await MainActor.run { isLoading = true }
-        defer { Task { @MainActor in isLoading = false } }
+        isLoading = true
+        defer { isLoading = false }
         
         do {
-            async let fetchedWOsTask: [MaintenanceWorkOrder] = try SupabaseService.shared.client
+            async let fetchedWOsResp = try SupabaseService.shared.client
                 .from("maintenance_work_orders")
                 .select()
                 .order("created_at", ascending: false)
                 .execute()
-                .value
                 
-            async let fetchedPartsTask: [MaintenancePartsUsed] = try SupabaseService.shared.client
+            async let fetchedPartsResp = try SupabaseService.shared.client
                 .from("maintenance_parts_used")
                 .select()
                 .execute()
-                .value
                 
-            async let fetchedVehiclesTask: [Vehicle] = try SupabaseService.shared.client
+            async let fetchedVehiclesResp = try SupabaseService.shared.client
                 .from("vehicles")
                 .select()
                 .execute()
-                .value
                 
-            let (fetchedWOs, fetchedParts, fetchedVehicles) = try await (fetchedWOsTask, fetchedPartsTask, fetchedVehiclesTask)
+            let (woResp, partsResp, vehiclesResp) = try await (fetchedWOsResp, fetchedPartsResp, fetchedVehiclesResp)
+            
+            let decoder = supabaseDecoder
+            let fetchedWOs = try decoder.decode([MaintenanceWorkOrder].self, from: woResp.data)
+            let fetchedParts = try decoder.decode([MaintenancePartsUsed].self, from: partsResp.data)
+            let fetchedVehicles = try decoder.decode([Vehicle].self, from: vehiclesResp.data)
             
             var mappedItems = fetchedWOs.map { WOItem(from: $0) }
             for i in mappedItems.indices {
@@ -177,9 +203,7 @@ class WorkOrderStore {
                 }
             }
             
-            await MainActor.run {
-                self.orders = mappedItems
-            }
+            self.orders = mappedItems
         } catch {
             print("Error fetching work orders or parts or vehicles: \(error)")
         }
@@ -193,21 +217,20 @@ class WorkOrderStore {
 
     // Accept a real MaintenanceWorkOrder → convert + insert
     func add(_ wo: MaintenanceWorkOrder) async throws -> MaintenanceWorkOrder {
-        let inserted: MaintenanceWorkOrder = try await SupabaseService.shared.client
+        let response = try await SupabaseService.shared.client
             .from("maintenance_work_orders")
             .insert(wo)
             .select() // Return the inserted row
             .single()
             .execute()
-            .value
             
-        await MainActor.run {
-            var item = WOItem(from: inserted)
-            if let label = resolvedVehicleLabel(for: inserted.vehicleId) {
-                item.vehicle = label
-            }
-            orders.insert(item, at: 0)
+        let inserted = try supabaseDecoder.decode(MaintenanceWorkOrder.self, from: response.data)
+            
+        var item = WOItem(from: inserted)
+        if let label = resolvedVehicleLabel(for: inserted.vehicleId) {
+            item.vehicle = label
         }
+        orders.insert(item, at: 0)
         
         return inserted
     }
@@ -215,19 +238,18 @@ class WorkOrderStore {
     // Convenience: add from a WOItem directly (used internally / defect linking)
     func addItem(_ item: WOItem) async throws -> MaintenanceWorkOrder {
         let dbModel = item.toMaintenanceWorkOrder()
-        let inserted: MaintenanceWorkOrder = try await SupabaseService.shared.client
+        let response = try await SupabaseService.shared.client
             .from("maintenance_work_orders")
             .insert(dbModel)
             .select() // Return the inserted row
             .single()
             .execute()
-            .value
             
-        await MainActor.run {
-            var fetchedItem = WOItem(from: inserted)
-            fetchedItem.vehicle = resolvedVehicleLabel(for: inserted.vehicleId) ?? item.vehicle
-            orders.insert(fetchedItem, at: 0)
-        }
+        let inserted = try supabaseDecoder.decode(MaintenanceWorkOrder.self, from: response.data)
+            
+        var fetchedItem = WOItem(from: inserted)
+        fetchedItem.vehicle = resolvedVehicleLabel(for: inserted.vehicleId) ?? item.vehicle
+        orders.insert(fetchedItem, at: 0)
         
         return inserted
     }
@@ -245,11 +267,9 @@ class WorkOrderStore {
             .eq("id", value: dbModel.id)
             .execute()
         
-        await MainActor.run {
-            if let freshIdx = self.orders.firstIndex(where: { $0.id == id }) {
-                self.orders[freshIdx].status = status
-                self.orders[freshIdx].completedAt = updatedItem.completedAt
-            }
+        if let freshIdx = self.orders.firstIndex(where: { $0.id == id }) {
+            self.orders[freshIdx].status = status
+            self.orders[freshIdx].completedAt = updatedItem.completedAt
         }
     }
 
@@ -260,10 +280,8 @@ class WorkOrderStore {
             .update(dbModel)
             .eq("id", value: dbModel.id)
             .execute()
-        await MainActor.run {
-            if let idx = self.orders.firstIndex(where: { $0.id == wo.id }) {
-                self.orders[idx] = wo
-            }
+        if let idx = self.orders.firstIndex(where: { $0.id == wo.id }) {
+            self.orders[idx] = wo
         }
     }
 
@@ -274,9 +292,7 @@ class WorkOrderStore {
             .delete()
             .eq("id", value: item.woNumber)
             .execute()
-        await MainActor.run {
-            self.orders.removeAll { $0.id == id }
-        }
+        self.orders.removeAll { $0.id == id }
     }
 
     func addPartUsed(_ part: MaintenancePartsUsed, to woId: String) async throws {
@@ -285,10 +301,8 @@ class WorkOrderStore {
             .insert(part)
             .execute()
             
-        await MainActor.run {
-            if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
-                self.orders[idx].partsUsed.append(part)
-            }
+        if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
+            self.orders[idx].partsUsed.append(part)
         }
     }
 
@@ -299,10 +313,8 @@ class WorkOrderStore {
             .eq("id", value: partId)
             .execute()
             
-        await MainActor.run {
-            if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
-                self.orders[idx].partsUsed.removeAll { $0.id == partId }
-            }
+        if let idx = self.orders.firstIndex(where: { $0.id == woId }) {
+            self.orders[idx].partsUsed.removeAll { $0.id == partId }
         }
     }
 

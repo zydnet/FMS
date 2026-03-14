@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct PartDetailView: View {
     @State var part: PartItem
     let store: InventoryStore

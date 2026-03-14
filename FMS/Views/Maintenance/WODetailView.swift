@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct WODetailView: View {
     @State var wo: WOItem
     let store: WorkOrderStore

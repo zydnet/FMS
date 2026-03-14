@@ -55,6 +55,7 @@ struct PartItem: Identifiable {
 
 
 // MARK: - Inventory Store
+@MainActor
 @Observable
 class InventoryStore {
     // imageName is UI-only; key = PartsInventory.id
@@ -65,6 +66,29 @@ class InventoryStore {
     // Add a loading state for UI
     var isLoading: Bool = false
 
+    private var supabaseDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format: \(dateStr)")
+        }
+        return decoder
+    }
+
     init() {
         // Will be populated by fetchParts()
     }
@@ -74,27 +98,26 @@ class InventoryStore {
     // MARK: - Supabase CRUD
     
     func fetchParts() async {
-        await MainActor.run { isLoading = true }
-defer { Task { await MainActor.run { self.isLoading = false } } }
+        isLoading = true
+        defer { isLoading = false }
         
         do {
-            let fetchedParts: [PartsInventory] = try await SupabaseService.shared.client
+            let response = try await SupabaseService.shared.client
                 .from("parts_inventory")
                 .select()
                 .execute()
-                .value
             
-            await MainActor.run {
-                self.parts = fetchedParts.map { dbPart in
-                    let defaultIconName = defaultIcon(for: dbPart.name ?? "")
-                    let partItem = PartItem(from: dbPart, imageName: defaultIconName)
-                    let icon = self.imageMap[partItem.id] ?? defaultIconName
-                    self.imageMap[partItem.id] = icon
-                    
-                    var finalPart = partItem
-                    finalPart.imageName = icon
-                    return finalPart
-                }
+            let fetchedParts = try supabaseDecoder.decode([PartsInventory].self, from: response.data)
+            
+            self.parts = fetchedParts.map { dbPart in
+                let defaultIconName = defaultIcon(for: dbPart.name ?? "")
+                let partItem = PartItem(from: dbPart, imageName: defaultIconName)
+                let icon = self.imageMap[partItem.id] ?? defaultIconName
+                self.imageMap[partItem.id] = icon
+                
+                var finalPart = partItem
+                finalPart.imageName = icon
+                return finalPart
             }
         } catch {
             print("Error fetching parts: \(error)")
@@ -112,22 +135,21 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
     }
 
     func addPart(_ inv: PartsInventory, imageName: String = "cube.box.fill") async throws {
-        let inserted: [PartsInventory] = try await SupabaseService.shared.client
+        let response = try await SupabaseService.shared.client
             .from("parts_inventory")
             .insert(inv)
             .select()
             .execute()
-            .value
+            
+        let inserted = try supabaseDecoder.decode([PartsInventory].self, from: response.data)
             
         guard let dbPart = inserted.first else {
             throw NSError(domain: "InventoryError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to retrieve the inserted part from the database."])
         }
         
-        await MainActor.run {
-            let partItem = PartItem(from: dbPart, imageName: imageName)
-            self.imageMap[partItem.id] = imageName
-            self.parts.append(partItem)
-        }
+        let partItem = PartItem(from: dbPart, imageName: imageName)
+        self.imageMap[partItem.id] = imageName
+        self.parts.append(partItem)
     }
 
     func updatePart(_ updated: PartItem) async throws {
@@ -138,10 +160,8 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
             .eq("id", value: updated.id)
             .execute()
         
-        await MainActor.run {
-            if let idx = self.parts.firstIndex(where: { $0.id == updated.id }) {
-                self.parts[idx] = updated
-            }
+        if let idx = self.parts.firstIndex(where: { $0.id == updated.id }) {
+            self.parts[idx] = updated
         }
     }
 
@@ -152,32 +172,29 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
             .eq("id", value: id)
             .execute()
         
-        await MainActor.run {
-            self.parts.removeAll { $0.id == id }
-        }
+        self.parts.removeAll { $0.id == id }
     }
 
     func reorder(part: PartItem, quantity: Int) async throws {
         let newStock = part.stock + quantity
         guard newStock >= 0 else { throw NSError(domain: "InventoryError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Stock cannot be negative"]) }
 
-        let response: [PartsInventory] = try await SupabaseService.shared.client
+        let response = try await SupabaseService.shared.client
             .from("parts_inventory")
             .update(["stock": newStock])
             .eq("id", value: part.id)
             .eq("stock", value: part.stock)
             .select()
             .execute()
-            .value
             
-        guard let updatedPart = response.first else {
+        let updatedParts = try supabaseDecoder.decode([PartsInventory].self, from: response.data)
+            
+        guard let updatedPart = updatedParts.first else {
             throw NSError(domain: "InventoryError", code: 409, userInfo: [NSLocalizedDescriptionKey: "Stock was modified by another transaction. Please try again."])
         }
         
-        await MainActor.run {
-            if let idx = self.parts.firstIndex(where: { $0.id == part.id }) {
-                self.parts[idx].stock = updatedPart.stock ?? newStock
-            }
+        if let idx = self.parts.firstIndex(where: { $0.id == part.id }) {
+            self.parts[idx].stock = updatedPart.stock ?? newStock
         }
     }
 }

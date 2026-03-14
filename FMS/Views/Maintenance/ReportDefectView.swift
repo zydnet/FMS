@@ -2,6 +2,7 @@ import SwiftUI
 import PostgREST
 import Supabase
 
+@MainActor
 struct ReportDefectView: View {
     let store: DefectStore
 

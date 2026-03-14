@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 public struct MaintenanceTabView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var selectedTab = 0

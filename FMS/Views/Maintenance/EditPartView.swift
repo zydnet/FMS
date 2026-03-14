@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct EditPartView: View {
     @Binding var part: PartItem
     let store: InventoryStore

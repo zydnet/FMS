@@ -155,6 +155,7 @@ struct ReorderPartView: View {
 }
 
 // MARK: - Bulk Reorder (low-stock items)
+@MainActor
 struct ReorderView: View {
     let store: InventoryStore
     @Environment(\.dismiss) private var dismiss

@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 public struct DefectsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var store: DefectStore
@@ -29,9 +30,15 @@ public struct DefectsView: View {
         return list
     }
 
-    init(woStore: WorkOrderStore = WorkOrderStore(), defectStore: DefectStore = DefectStore()) {
+    @MainActor
+    init(woStore: WorkOrderStore, defectStore: DefectStore) {
         self.woStore = woStore
         self._store  = State(initialValue: defectStore)
+    }
+
+    @MainActor
+    public static func make() -> DefectsView {
+        DefectsView(woStore: WorkOrderStore(), defectStore: DefectStore())
     }
 
     public var body: some View {
@@ -254,5 +261,6 @@ struct DefectCardView: View {
 }
 
 #Preview {
-    DefectsView()
+    @MainActor in
+    DefectsView.make()
 }

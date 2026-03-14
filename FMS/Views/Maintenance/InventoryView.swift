@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct InventoryView: View {
     @Environment(\.colorScheme) private var colorScheme
     var store: InventoryStore

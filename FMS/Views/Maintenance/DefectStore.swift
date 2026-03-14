@@ -112,32 +112,58 @@ struct DefectItem: Identifiable {
 }
 
 // MARK: - Defect Store
+@MainActor
 @Observable
 class DefectStore {
     var defects: [DefectItem] = []
     var isLoading: Bool = false
 
+    private var supabaseDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = dateFormatter.date(from: dateStr) { return date }
+            
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format: \(dateStr)")
+        }
+        return decoder
+    }
+
     // MARK: - Supabase CRUD
 
     func fetchDefects() async {
-        await MainActor.run { isLoading = true }
-defer { Task { await MainActor.run { self.isLoading = false } } }
+        isLoading = true
+        defer { isLoading = false }
 
         do {
-            async let fetchedDefectsTask: [Defect] = try SupabaseService.shared.client
+            async let fetchedDefectsResp = try SupabaseService.shared.client
                 .from("defects")
                 .select()
                 .order("reported_at", ascending: false)
                 .execute()
-                .value
                 
-            async let fetchedVehiclesTask: [Vehicle] = try SupabaseService.shared.client
+            async let fetchedVehiclesResp = try SupabaseService.shared.client
                 .from("vehicles")
                 .select()
                 .execute()
-                .value
                 
-            let (fetchedDefects, fetchedVehicles) = try await (fetchedDefectsTask, fetchedVehiclesTask)
+            let (defectsResp, vehiclesResp) = try await (fetchedDefectsResp, fetchedVehiclesResp)
+            
+            let decoder = supabaseDecoder
+            let fetchedDefects = try decoder.decode([Defect].self, from: defectsResp.data)
+            let fetchedVehicles = try decoder.decode([Vehicle].self, from: vehiclesResp.data)
 
             var mappedItems = fetchedDefects.map { DefectItem(from: $0) }
             
@@ -153,9 +179,7 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
                 }
             }
 
-            await MainActor.run {
-                self.defects = mappedItems
-            }
+            self.defects = mappedItems
         } catch {
             print("Error fetching defects or vehicles: \(error)")
         }
@@ -163,19 +187,18 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
 
     func addDefect(_ item: DefectItem) async throws {
         let db = item.toDefect()
-        let inserted: [Defect] = try await SupabaseService.shared.client
+        let response = try await SupabaseService.shared.client
             .from("defects")
             .insert(db)
             .select()
             .execute()
-            .value
+        
+        let inserted = try supabaseDecoder.decode([Defect].self, from: response.data)
 
-        await MainActor.run {
-            if let first = inserted.first {
-                var newItem = DefectItem(from: first)
-                newItem.vehicleDisplay = item.vehicleDisplay
-                self.defects.insert(newItem, at: 0)
-            }
+        if let first = inserted.first {
+            var newItem = DefectItem(from: first)
+            newItem.vehicleDisplay = item.vehicleDisplay
+            self.defects.insert(newItem, at: 0)
         }
     }
 
@@ -187,10 +210,8 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
             .eq("id", value: item.id.uuidString)
             .execute()
 
-        await MainActor.run {
-            if let idx = self.defects.firstIndex(where: { $0.id == item.id }) {
-                self.defects[idx] = item
-            }
+        if let idx = self.defects.firstIndex(where: { $0.id == item.id }) {
+            self.defects[idx] = item
         }
     }
 
@@ -201,9 +222,7 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
             .eq("id", value: id.uuidString)
             .execute()
 
-        await MainActor.run {
-            self.defects.removeAll { $0.id == id }
-        }
+        self.defects.removeAll { $0.id == id }
     }
 
     /// Links a work order to a defect: updates work_order_id + status in DB and locally.
@@ -218,11 +237,9 @@ defer { Task { await MainActor.run { self.isLoading = false } } }
             .eq("id", value: defectId.uuidString)
             .execute()
 
-        await MainActor.run {
-            if let idx = self.defects.firstIndex(where: { $0.id == defectId }) {
-                self.defects[idx].linkedWorkOrderId = workOrderId
-                self.defects[idx].status            = "in_progress"
-            }
+        if let idx = self.defects.firstIndex(where: { $0.id == defectId }) {
+            self.defects[idx].linkedWorkOrderId = workOrderId
+            self.defects[idx].status            = "in_progress"
         }
     }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct DefectDetailView: View {
     @State private var defect: DefectItem
     let store: DefectStore

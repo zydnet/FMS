@@ -2,7 +2,7 @@ import SwiftUI
 
 // WorkOrderDetailView — compile-safe stub.
 // All live editing is handled by WODetailView (uses WOItem + WorkOrderStore).
-public struct WorkOrderDetailView: View {
+@MainActor public struct WorkOrderDetailView: View {
     let woNumber:    String
     let vehicle:     String
     let description: String
@@ -66,6 +66,10 @@ public struct WorkOrderDetailView: View {
                 }
             }
         }
+#if swift(>=5.9)
+        .toolbar(.hidden, for: .navigationBar)
+#else
         .navigationBarHidden(true)
+#endif
     }
 }
