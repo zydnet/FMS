@@ -13,8 +13,7 @@ public struct MainDashboardView: View {
             case .driver:
                 DriverDashboardView()
             case .maintenance:
-                // TODO: MaintenanceDashboardView
-                placeholderView(role: "Maintenance")
+                MaintenanceTabView()
             case .none:
                 placeholderView(role: "Unknown")
             }
@@ -42,8 +41,8 @@ public struct MainDashboardView: View {
                     Spacer().frame(height: 40)
                     
                     Button("Logout") {
-                        withAnimation {
-                            authViewModel.logout()
+                        Task {
+                            await authViewModel.logout()
                         }
                     }
                     .buttonStyle(.fmsPrimary)
