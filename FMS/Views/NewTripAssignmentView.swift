@@ -79,8 +79,9 @@ public struct NewTripAssignmentView: View {
                 .padding(16)
             }
             .background(FMSTheme.backgroundPrimary.ignoresSafeArea())
-            .navigationTitle("New Trip Assignment")
+            .navigationTitle("Trip Assignment")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .bottom) {
                 bottomStickyButton
             }
