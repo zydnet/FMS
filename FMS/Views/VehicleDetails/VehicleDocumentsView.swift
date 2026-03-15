@@ -753,8 +753,8 @@ public struct VehicleDocumentDetailView: View {
                 
                 await MainActor.run {
                     isUploading = false
-                    // Show the raw error description on screen so the user can easily see it
-                    self.uploadError = String(describing: error)
+                    // Show a helpful, generic message to the user
+                    self.uploadError = "Unable to save document. Please check your connection and try again."
                 }
             }
         }
