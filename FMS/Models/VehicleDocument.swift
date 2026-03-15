@@ -124,14 +124,30 @@ public struct VehicleDocument: Codable, Identifiable {
         try container.encode(vehicleId,    forKey: .vehicleId)
         try container.encode(documentType, forKey: .documentType)
         try container.encode(fileUrl,      forKey: .fileUrl)
+        
         try container.encodeIfPresent(uploadedBy,      forKey: .uploadedBy)
         try container.encodeIfPresent(insuranceStatus, forKey: .insuranceStatus)
-        // Dates encoded as ISO strings if needed
+        try container.encodeIfPresent(insuranceCompany, forKey: .insuranceCompany)
+        try container.encodeIfPresent(policyNumber,      forKey: .policyNumber)
+        try container.encodeIfPresent(ownerName,         forKey: .ownerName)
+        try container.encodeIfPresent(vehicleModel,      forKey: .vehicleModel)
+        try container.encodeIfPresent(permitNumber,      forKey: .permitNumber)
+        try container.encodeIfPresent(permitType,        forKey: .permitType)
+        try container.encodeIfPresent(certificateNumber, forKey: .certificateNumber)
+
+        let formatter = ISO8601DateFormatter()
+        // Standard ISO8601 for dates
         if let d = expiryDate {
-            try container.encode(ISO8601DateFormatter().string(from: d), forKey: .expiryDate)
+            try container.encode(formatter.string(from: d), forKey: .expiryDate)
+        }
+        if let d = issueDate {
+            try container.encode(formatter.string(from: d), forKey: .issueDate)
         }
         if let d = uploadedAt {
-            try container.encode(ISO8601DateFormatter().string(from: d), forKey: .uploadedAt)
+            try container.encode(formatter.string(from: d), forKey: .uploadedAt)
+        }
+        if let d = registrationDate {
+            try container.encode(formatter.string(from: d), forKey: .registrationDate)
         }
     }
 }

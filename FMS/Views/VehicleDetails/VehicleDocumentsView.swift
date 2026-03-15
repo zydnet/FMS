@@ -35,6 +35,9 @@ public struct VehicleDocumentsView: View {
                     if isLoading {
                         loadingRow
                     }
+                    if let error = errorMessage {
+                        errorRow(error)
+                    }
                     ForEach(kDocumentSlots, id: \.key) { slot in
                         let doc = matchedDocument(for: slot)
                         NavigationLink {
@@ -69,6 +72,20 @@ public struct VehicleDocumentsView: View {
                 .foregroundColor(FMSTheme.textSecondary)
             Spacer()
         }
+        .padding(.horizontal, 4)
+    }
+
+    private func errorRow(_ msg: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+                .font(.system(size: 14))
+            Text(msg)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.red)
+            Spacer()
+        }
+        .padding(.vertical, 8)
         .padding(.horizontal, 4)
     }
 
@@ -260,6 +277,9 @@ public struct VehicleDocumentDetailView: View {
     @State private var field2 = ""
     @State private var issueDate = Date()
     @State private var expiryDate = Date().addingTimeInterval(365 * 24 * 3600)
+    
+    // Persistent ID for new documents to prevent orphaned storage files on retry
+    @State private var pendingDocumentID: String? = nil
 
     private var hasFile: Bool {
         guard let url = document?.fileUrl, !url.isEmpty,
@@ -340,6 +360,11 @@ public struct VehicleDocumentDetailView: View {
                 // Required to access security scoped files outside app sandbox
                 if url.startAccessingSecurityScopedResource() {
                     selectedFileURL = url
+                    
+                    // Initialize a persistent ID for this new document if not already set
+                    if document == nil && pendingDocumentID == nil {
+                        pendingDocumentID = UUID().uuidString.lowercased()
+                    }
                     // We don't stop accessing here, we stop right after we read the Data before upload.
                 }
             case .failure(let error):
@@ -347,6 +372,9 @@ public struct VehicleDocumentDetailView: View {
             }
         }
         .quickLookPreview($quickLookURL)
+        .onDisappear {
+            selectedFileURL?.stopAccessingSecurityScopedResource()
+        }
     }
 
     // MARK: Status badge in navbar
@@ -620,12 +648,14 @@ public struct VehicleDocumentDetailView: View {
         Task {
             do {
                 var publicUrlStr = document?.fileUrl ?? ""
+                let docID = document?.id ?? pendingDocumentID ?? UUID().uuidString.lowercased()
                 
                 if let url = selectedFileURL {
+                    defer { url.stopAccessingSecurityScopedResource() }
                     let data = try Data(contentsOf: url)
-                    url.stopAccessingSecurityScopedResource()
+                    // We don't stop access here anymore, defer handles it
                     
-                    let fileName = "\(vehicleId)_\(slot.key)_\(UUID().uuidString.prefix(8)).pdf"
+                    let fileName = "\(vehicleId)_\(slot.key)_\(docID.prefix(8)).pdf"
                     
                     // Upload to Supabase Bucket
                     try await SupabaseService.shared.client.storage
@@ -691,7 +721,7 @@ public struct VehicleDocumentDetailView: View {
                 }
 
                 let insertPayload = DocumentInsertPayload(
-                    id: document?.id ?? UUID().uuidString.lowercased(),
+                    id: docID,
                     vehicle_id: vehicleId,
                     document_type: mappedType,
                     file_url: publicUrlStr,
@@ -826,16 +856,5 @@ extension VehicleDocument {
         if expiry < now { return .expired }
         let daysLeft = Calendar.current.dateComponents([.day], from: now, to: expiry).day ?? 0
         return daysLeft <= 30 ? .expiringSoon : .valid
-    }
-}
-
-extension String {
-    var humanized: String {
-        self
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "-", with: " ")
-            .split(separator: " ")
-            .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
-            .joined(separator: " ")
     }
 }
