@@ -652,10 +652,8 @@ public struct VehicleDocumentDetailView: View {
                 let docID = document?.id ?? pendingDocumentID ?? UUID().uuidString.lowercased()
                 
                 if let url = selectedFileURL {
-                    // Read data then immediately stop access to avoid leaks
+                    // Read data then stop access ONLY AFTER success to allow retries
                     let data = try? Data(contentsOf: url)
-                    url.stopAccessingSecurityScopedResource()
-                    selectedFileURL = nil 
                     
                     guard let fileData = data else {
                         throw NSError(domain: "FMS", code: 400, userInfo: [NSLocalizedDescriptionKey: "Could not read selected file"])
@@ -668,7 +666,7 @@ public struct VehicleDocumentDetailView: View {
                         .upload(
                             fileName,
                             data: fileData,
-                            options: FileOptions(contentType: "application/pdf")
+                            options: FileOptions(contentType: "application/pdf", upsert: true)
                         )
                     
                     // Get Public URL
@@ -742,6 +740,8 @@ public struct VehicleDocumentDetailView: View {
                     .execute()
                 
                 await MainActor.run {
+                    selectedFileURL?.stopAccessingSecurityScopedResource()
+                    selectedFileURL = nil
                     isUploading = false
                     onSave()
                     dismiss()
@@ -857,9 +857,12 @@ public enum DocumentStatus {
 extension VehicleDocument {
     public var documentStatus: DocumentStatus {
         guard let expiry = expiryDate else { return .valid }
-        let now = Date()
-        if expiry < now { return .expired }
-        let daysLeft = Calendar.current.dateComponents([.day], from: now, to: expiry).day ?? 0
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let expiryDay = calendar.startOfDay(for: expiry)
+        
+        if expiryDay < today { return .expired }
+        let daysLeft = calendar.dateComponents([.day], from: today, to: expiryDay).day ?? 0
         return daysLeft <= 30 ? .expiringSoon : .valid
     }
 }
