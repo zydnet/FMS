@@ -631,8 +631,8 @@ public struct VehicleDocumentDetailView: View {
                     try await SupabaseService.shared.client.storage
                         .from("vehicle-documents")
                         .upload(
-                            path: fileName,
-                            file: data,
+                            fileName,
+                            data: data,
                             options: FileOptions(contentType: "application/pdf")
                         )
                     
