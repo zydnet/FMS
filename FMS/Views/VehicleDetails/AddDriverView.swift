@@ -246,9 +246,14 @@ struct AddDriverView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(FMSTheme.textSecondary)
                   
-                  DatePicker("", selection: $viewModel.licenseExpiry, displayedComponents: .date)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                  DatePicker(
+                    "",
+                    selection: $viewModel.licenseExpiry,
+                    in: Date()...,          // disables all dates before today
+                    displayedComponents: .date
+                  )
+                  .labelsHidden()
+                  .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .background(
                       RoundedRectangle(cornerRadius: 12)
