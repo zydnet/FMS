@@ -44,12 +44,12 @@ public final class SupabaseDriversDataSource: DriversDataSource {
         let drivers = try decoder.decode([User].self, from: driversResponse.data)
         
         // Fetch all active assignments
-        let newISO = ISO8601DateFormatter().string(from: Date())
+        let nowISO = ISO8601DateFormatter().string(from: Date())
         let assignmentsResponse = try await client
             .from("driver_vehicle_assignments")
             .select()
             .eq("status", value: "scheduled")
-            .gte("shift_end", value: newISO)
+            .gte("shift_end", value: nowISO)
             .execute()
         let assignments = try decoder.decode([DriverVehicleAssignment].self, from: assignmentsResponse.data)
             
