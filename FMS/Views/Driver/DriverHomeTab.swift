@@ -12,6 +12,7 @@ struct DriverHomeTab: View {
 
     /// Trip to start after pre-trip inspection completes
     @State private var pendingStartTrip: Trip?
+    @State private var showAllUpcomingJobs = false
 
     var body: some View {
         NavigationStack {
@@ -56,6 +57,9 @@ struct DriverHomeTab: View {
             }
             .navigationDestination(item: $selectedTrip) { trip in
                 NewTripAssignmentView(trip: trip, viewModel: viewModel)
+            }
+            .navigationDestination(isPresented: $showAllUpcomingJobs) {
+                AllUpcomingJobsView(viewModel: viewModel)
             }
             .onChange(of: showPreTripInspection) { _, isShowing in
                 if !isShowing {
@@ -120,16 +124,6 @@ struct DriverHomeTab: View {
                     .foregroundStyle(FMSTheme.textPrimary)
 
                 Spacer()
-
-                if viewModel.currentJob != nil {
-                    Text("PRIORITY")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(FMSTheme.obsidian)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(FMSTheme.amber)
-                        .cornerRadius(6)
-                }
             }
 
             if let job = viewModel.currentJob {
@@ -163,19 +157,9 @@ struct DriverHomeTab: View {
         let upcoming = viewModel.remainingUpcomingTrips
         if !upcoming.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Upcoming Jobs")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(FMSTheme.textPrimary)
-
-                    Spacer()
-
-                    Button("View All") {
-                        viewModel.selectedSegment = .upcoming
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(FMSTheme.amber)
-                }
+                Text("Upcoming Jobs")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(FMSTheme.textPrimary)
 
                 ForEach(upcoming.prefix(3)) { trip in
                     UpcomingJobCard(trip: trip) {

@@ -27,17 +27,18 @@ struct DefectItem: Identifiable {
 
     var imageName: String {
         switch category.lowercased() {
-        case "tyres":      return "circle.fill"
-        case "brakes":     return "pause.rectangle.fill"
-        case "electrical": return "bolt.fill"
-        case "body":       return "car.side.rear.open.fill"
-        default:           return "exclamationmark.triangle.fill"
+        case "tires", "tyres":          return "circle.fill"
+        case "brakes":                  return "pause.rectangle.fill"
+        case "electrical":              return "bolt.fill"
+        case "body_damage", "body":     return "car.side.rear.open.fill"
+        case "engine":                  return "engine.combustion"
+        default:                        return "exclamationmark.triangle.fill"
         }
     }
 
     enum Priority: String, CaseIterable {
         case critical = "critical"
-        case urgent   = "urgent"
+        case high     = "high"
         case medium   = "medium"
         case low      = "low"
 
@@ -47,7 +48,7 @@ struct DefectItem: Identifiable {
         var color: Color {
             switch self {
             case .critical: return FMSTheme.alertRed
-            case .urgent:   return FMSTheme.alertOrange
+            case .high:     return FMSTheme.alertOrange
             case .medium:   return Color(red: 0.2, green: 0.5, blue: 1.0)
             case .low:      return FMSTheme.alertGreen
             }
@@ -56,7 +57,7 @@ struct DefectItem: Identifiable {
         static func from(_ string: String) -> Priority {
             switch string.lowercased() {
             case "critical":        return .critical
-            case "high", "urgent":  return .urgent
+            case "high", "urgent":  return .high
             case "low":             return .low
             default:                return .medium
             }
@@ -90,7 +91,8 @@ struct DefectItem: Identifiable {
             priority:    priority.rawValue,
             status:      status,
             reportedAt:  reportedAt,
-            resolvedAt:  nil
+            resolvedAt:  nil,
+            tripId:      nil
         )
     }
 

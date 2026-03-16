@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Supabase
 
 // MARK: - Driver Day Stats
 
@@ -168,8 +169,65 @@ public final class DriverDashboardViewModel {
         todayStats.tripsCompleted += 1
     }
 
-    public func submitIssueReport(_ report: IssueReport) {
+    public func submitIssueReport(_ report: IssueReport) async throws {
+        // Map IssueCategory to DB enum values
+        let categoryMapping: [IssueCategory: String] = [
+            .engine: "engine", .brakes: "brakes", .tires: "tires",
+            .electrical: "electrical", .body: "body_damage", .other: "other"
+        ]
+        // Map IssueSeverity to DB enum values
+        let priorityMapping: [IssueSeverity: String] = [
+            .low: "low", .medium: "medium", .high: "high", .critical: "critical"
+        ]
+
+        // Only send FK fields that are valid UUIDs — mock IDs will cause FK violations
+        var vehicleId = validUUID(report.vehicleId) ?? validUUID(assignedVehicle?.id)
+        let reportedBy = validUUID(report.driverId)
+        let tripId = validUUID(report.tripId)
+
+        // vehicle_id is NOT NULL — if mock data, fetch first real vehicle from DB
+        if vehicleId == nil {
+            let resp = try await SupabaseService.shared.client
+                .from("vehicles")
+                .select("id")
+                .limit(1)
+                .execute()
+            if let first = try? JSONDecoder().decode([[String: String]].self, from: resp.data).first {
+                vehicleId = first["id"]
+            }
+        }
+
+        guard let resolvedVehicleId = vehicleId else {
+            throw NSError(domain: "FMS", code: 1, userInfo: [NSLocalizedDescriptionKey: "No vehicle found to report defect against."])
+        }
+
+        let title = "\(report.category.rawValue) Issue"
+            + (report.description.isEmpty ? "" : " – \(report.description.prefix(60))")
+
+        let defect = DefectInsert(
+            vehicleId: resolvedVehicleId,
+            reportedBy: reportedBy,
+            tripId: tripId,
+            title: title,
+            description: report.description,
+            category: categoryMapping[report.category] ?? "other",
+            priority: priorityMapping[report.severity] ?? "medium",
+            status: "open",
+            reportedAt: Date()
+        )
+
+        try await SupabaseService.shared.client
+            .from("defects")
+            .insert(defect)
+            .execute()
+
         issueReports.append(report)
+    }
+
+    /// Returns the string only if it's a valid UUID, otherwise nil.
+    private func validUUID(_ string: String?) -> String? {
+        guard let string, UUID(uuidString: string) != nil else { return nil }
+        return string
     }
 
     // MARK: - Init
@@ -247,12 +305,18 @@ public final class MockDriverDashboardDataSource: DriverDashboardDataSource {
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
         let dayAfter = calendar.date(byAdding: .day, value: 2, to: calendar.startOfDay(for: Date()))!
         let threeDays = calendar.date(byAdding: .day, value: 3, to: calendar.startOfDay(for: Date()))!
+        let fourDays = calendar.date(byAdding: .day, value: 4, to: calendar.startOfDay(for: Date()))!
+        let fiveDays = calendar.date(byAdding: .day, value: 5, to: calendar.startOfDay(for: Date()))!
+        let sixDays = calendar.date(byAdding: .day, value: 6, to: calendar.startOfDay(for: Date()))!
 
         return [
             Trip(
                 id: "trip-102", vehicleId: "v-001", driverId: "drv-8821",
                 shipmentDescription: "Textile shipment",
-                startName: "Mumbai Warehouse", endName: "Nashik Hub",
+                startLat: 19.0760, startLng: 72.8777,
+                startName: "Mumbai Warehouse",
+                endLat: 19.9975, endLng: 73.7898,
+                endName: "Nashik Hub",
                 distanceKm: 167, estimatedDurationMin: 250,
                 status: "scheduled",
                 startTime: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: tomorrow)
@@ -260,7 +324,10 @@ public final class MockDriverDashboardDataSource: DriverDashboardDataSource {
             Trip(
                 id: "trip-103", vehicleId: "v-001", driverId: "drv-8821",
                 shipmentDescription: "FMCG delivery",
-                startName: "Mumbai Warehouse", endName: "Kolhapur Depot",
+                startLat: 19.0760, startLng: 72.8777,
+                startName: "Mumbai Warehouse",
+                endLat: 16.7050, endLng: 74.2433,
+                endName: "Kolhapur Depot",
                 distanceKm: 230, estimatedDurationMin: 330,
                 status: "scheduled",
                 startTime: calendar.date(bySettingHour: 7, minute: 30, second: 0, of: dayAfter)
@@ -268,10 +335,46 @@ public final class MockDriverDashboardDataSource: DriverDashboardDataSource {
             Trip(
                 id: "trip-104", vehicleId: "v-001", driverId: "drv-8821",
                 shipmentDescription: "Auto parts",
-                startName: "Mumbai Warehouse", endName: "Aurangabad Center",
+                startLat: 19.0760, startLng: 72.8777,
+                startName: "Mumbai Warehouse",
+                endLat: 19.8762, endLng: 75.3433,
+                endName: "Aurangabad Center",
                 distanceKm: 335, estimatedDurationMin: 420,
                 status: "scheduled",
                 startTime: calendar.date(bySettingHour: 6, minute: 0, second: 0, of: threeDays)
+            ),
+            Trip(
+                id: "trip-105", vehicleId: "v-001", driverId: "drv-8821",
+                shipmentDescription: "Pharmaceutical supplies",
+                startLat: 19.0760, startLng: 72.8777,
+                startName: "Mumbai Warehouse",
+                endLat: 21.1458, endLng: 79.0882,
+                endName: "Nagpur Distribution Hub",
+                distanceKm: 810, estimatedDurationMin: 720,
+                status: "scheduled",
+                startTime: calendar.date(bySettingHour: 5, minute: 0, second: 0, of: fourDays)
+            ),
+            Trip(
+                id: "trip-106", vehicleId: "v-001", driverId: "drv-8821",
+                shipmentDescription: "Steel coils",
+                startLat: 19.9975, startLng: 73.7898,
+                startName: "Nashik Hub",
+                endLat: 21.1702, endLng: 72.8311,
+                endName: "Surat Terminal",
+                distanceKm: 260, estimatedDurationMin: 310,
+                status: "scheduled",
+                startTime: calendar.date(bySettingHour: 7, minute: 0, second: 0, of: fiveDays)
+            ),
+            Trip(
+                id: "trip-107", vehicleId: "v-001", driverId: "drv-8821",
+                shipmentDescription: "Food grains",
+                startLat: 18.5204, startLng: 73.8567,
+                startName: "Pune Distribution Center",
+                endLat: 15.2993, endLng: 74.1240,
+                endName: "Goa Warehouse",
+                distanceKm: 450, estimatedDurationMin: 480,
+                status: "scheduled",
+                startTime: calendar.date(bySettingHour: 6, minute: 30, second: 0, of: sixDays)
             ),
         ]
     }

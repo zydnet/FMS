@@ -12,8 +12,8 @@ struct EditDefectView: View {
     @State private var description = ""
     @State private var priority    = DefectItem.Priority.medium
 
-    let categories = ["mechanical", "electrical", "tyres", "brakes", "body", "other"]
-    @State private var category = "mechanical"
+    let categories = ["engine", "electrical", "tires", "brakes", "body_damage", "other"]
+    @State private var category = "engine"
     
     @State private var updateError: String? = nil
     @State private var showUpdateError = false

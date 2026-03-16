@@ -13,6 +13,7 @@ public struct NewTripAssignmentView: View {
     let trip: Trip
     @Bindable var viewModel: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     
     @State private var showIssueReport = false
     @State private var showPreTripInspection = false
@@ -140,6 +141,7 @@ public struct NewTripAssignmentView: View {
                 if !isShowing {
                     if preTripInspectionCompleted {
                         viewModel.startTrip(trip)
+                        openAppleMaps()
                         dismiss()
                     }
                     preTripInspectionCompleted = false
@@ -175,6 +177,8 @@ public struct NewTripAssignmentView: View {
                 }
                 .buttonStyle(.fmsPrimary)
                 .disabled(viewModel.assignedVehicle == nil)
+
+                navigateButton
             } else if trip.status?.lowercased() == "active" {
                 Button {
                     if viewModel.assignedVehicle != nil {
@@ -191,6 +195,8 @@ public struct NewTripAssignmentView: View {
                 }
                 .buttonStyle(.fmsPrimary)
                 .disabled(viewModel.assignedVehicle == nil)
+
+                navigateButton
 
                 Button {
                     showIssueReport = true
@@ -472,6 +478,49 @@ public struct NewTripAssignmentView: View {
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(valueColor)
+        }
+    }
+
+    // MARK: - Navigate Button
+
+    private var navigateButton: some View {
+        Button {
+            openAppleMaps()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "map.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Navigate")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundStyle(FMSTheme.amber)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background {
+                if #available(iOS 26, *) {
+                    FMSTheme.amber.opacity(0.15)
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
+                } else {
+                    FMSTheme.amber.opacity(0.12)
+                        .cornerRadius(14)
+                }
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(FMSTheme.amber.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Apple Maps
+
+    private func openAppleMaps() {
+        guard let lat = trip.endLat, let lng = trip.endLng else { return }
+        let destination = trip.endName ?? "Destination"
+        let encoded = destination.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? destination
+        if let url = URL(string: "http://maps.apple.com/?daddr=\(lat),\(lng)&dname=\(encoded)&dirflg=d") {
+            openURL(url)
         }
     }
 

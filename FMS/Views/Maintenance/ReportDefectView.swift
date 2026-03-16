@@ -14,7 +14,7 @@ struct ReportDefectView: View {
     @State private var defectTitle          = ""
     @State private var description          = ""
     @State private var selectedPriority     = DefectItem.Priority.medium
-    @State private var selectedCategory     = "mechanical"
+    @State private var selectedCategory     = "engine"
 
     // Vehicle picker state
     @State private var vehicles: [Vehicle]  = []
@@ -28,11 +28,11 @@ struct ReportDefectView: View {
 
     // DB-compatible categories (must match defects_category_check constraint)
     let categories: [(display: String, value: String)] = [
-        ("Mechanical",  "mechanical"),
+        ("Engine",      "engine"),
         ("Electrical",  "electrical"),
-        ("Tyres",       "tyres"),
+        ("Tires",       "tires"),
         ("Brakes",      "brakes"),
-        ("Body",        "body"),
+        ("Body Damage", "body_damage"),
         ("Other",       "other")
     ]
 
