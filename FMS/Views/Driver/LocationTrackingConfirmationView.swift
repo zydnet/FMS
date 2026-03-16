@@ -77,6 +77,8 @@ public struct LocationTrackingConfirmationView: View {
                             .font(.title3)
                             .foregroundStyle(FMSTheme.textTertiary)
                     }
+                    .accessibilityLabel("Close")
+                    .accessibilityHint("Dismiss this screen")
                 }
             }
         }
