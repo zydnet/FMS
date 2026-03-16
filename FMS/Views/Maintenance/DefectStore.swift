@@ -14,6 +14,7 @@ struct DefectItem: Identifiable {
     var description: String
     var reportedAt: Date
     var status: String
+    var tripId: String?              // trip_id from DB
     var linkedWorkOrderId: String?   // work_order_id from DB
 
     var reportedAgo: String {
@@ -75,6 +76,7 @@ struct DefectItem: Identifiable {
         self.description = defect.description ?? ""
         self.reportedAt  = defect.reportedAt ?? Date()
         self.status      = defect.status ?? "open"
+        self.tripId      = defect.tripId
         self.linkedWorkOrderId = defect.workOrderId
     }
 
@@ -92,14 +94,14 @@ struct DefectItem: Identifiable {
             status:      status,
             reportedAt:  reportedAt,
             resolvedAt:  nil,
-            tripId:      nil
+            tripId:      tripId
         )
     }
 
     // Manual memberwise init (for local creation before saving)
     init(id: UUID = UUID(), title: String, vehicleId: String, vehicleDisplay: String = "", category: String,
          priority: Priority, description: String, reportedAt: Date,
-         status: String = "open", linkedWorkOrderId: String? = nil) {
+         status: String = "open", tripId: String? = nil, linkedWorkOrderId: String? = nil) {
         self.id                = id
         self.title             = title
         self.vehicleId         = vehicleId
@@ -109,6 +111,7 @@ struct DefectItem: Identifiable {
         self.description       = description
         self.reportedAt        = reportedAt
         self.status            = status
+        self.tripId            = tripId
         self.linkedWorkOrderId = linkedWorkOrderId
     }
 }

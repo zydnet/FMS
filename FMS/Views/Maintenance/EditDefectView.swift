@@ -42,7 +42,7 @@ struct EditDefectView: View {
                                     HStack(spacing: 8) {
                                         ForEach(categories, id: \.self) { cat in
                                             Button { withAnimation { category = cat } } label: {
-                                                Text(cat).font(.system(size: 13, weight: .semibold))
+                                                Text(cat.replacingOccurrences(of: "_", with: " ").capitalized).font(.system(size: 13, weight: .semibold))
                                                     .padding(.horizontal, 14).padding(.vertical, 8)
                                                     .background(category == cat ? FMSTheme.amber : Color.gray.opacity(0.1))
                                                     .foregroundColor(category == cat ? .black : FMSTheme.textSecondary)

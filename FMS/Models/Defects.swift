@@ -20,6 +20,7 @@ public struct Defect: Codable, Identifiable {
     public var reportedAt: Date?
     public var resolvedAt: Date?
     public var tripId: String?
+    public var imageUrls: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -34,6 +35,7 @@ public struct Defect: Codable, Identifiable {
         case reportedAt  = "reported_at"
         case resolvedAt  = "resolved_at"
         case tripId      = "trip_id"
+        case imageUrls   = "image_urls"
     }
 }
 
@@ -48,6 +50,7 @@ public struct DefectInsert: Codable {
     public var priority: String?
     public var status: String?
     public var reportedAt: Date?
+    public var imageUrls: [String]?
 
     enum CodingKeys: String, CodingKey {
         case vehicleId  = "vehicle_id"
@@ -59,5 +62,6 @@ public struct DefectInsert: Codable {
         case priority
         case status
         case reportedAt = "reported_at"
+        case imageUrls  = "image_urls"
     }
 }

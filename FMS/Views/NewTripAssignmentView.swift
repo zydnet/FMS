@@ -54,10 +54,33 @@ public struct NewTripAssignmentView: View {
             VStack(spacing: 24) {
                 
                 // Map
+                ZStack(alignment: .bottomTrailing) {
                     MapCard(stops: activeStops)
                         .frame(height: 240)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+
+                    if trip.endLat != nil && trip.endLng != nil {
+                        Button {
+                            openAppleMaps()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text("Navigate")
+                                    .font(.system(size: 13, weight: .bold))
+                            }
+                            .foregroundStyle(FMSTheme.obsidian)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(FMSTheme.amber)
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(12)
+                    }
+                }
                     
                     // Stats
                     statsSection
@@ -178,7 +201,9 @@ public struct NewTripAssignmentView: View {
                 .buttonStyle(.fmsPrimary)
                 .disabled(viewModel.assignedVehicle == nil)
 
-                navigateButton
+                if trip.endLat != nil && trip.endLng != nil {
+                    navigateButton
+                }
             } else if trip.status?.lowercased() == "active" {
                 Button {
                     if viewModel.assignedVehicle != nil {
@@ -196,7 +221,9 @@ public struct NewTripAssignmentView: View {
                 .buttonStyle(.fmsPrimary)
                 .disabled(viewModel.assignedVehicle == nil)
 
-                navigateButton
+                if trip.endLat != nil && trip.endLng != nil {
+                    navigateButton
+                }
 
                 Button {
                     showIssueReport = true

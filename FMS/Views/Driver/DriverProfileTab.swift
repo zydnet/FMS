@@ -197,7 +197,7 @@ struct DriverProfileTab: View {
 
     private var availableDocumentTypes: [DocumentType] {
         Self.driverDocumentTypes.filter { type in
-            !uploadedDocuments.contains(where: { $0.type == type })
+            !uploadedDocuments.contains(where: { $0.type == type && $0.status != .expired && $0.status != .rejected })
         }
     }
 
@@ -254,7 +254,7 @@ struct DriverProfileTab: View {
                         HStack(spacing: 8) {
                             Image(systemName: "doc.badge.plus")
                                 .font(.system(size: 14, weight: .semibold))
-                            Text("Choose File")
+                            Text("Choose Photo")
                                 .font(.system(size: 15, weight: .bold))
                         }
                         .foregroundStyle(FMSTheme.obsidian)
@@ -341,7 +341,7 @@ struct DriverProfileTab: View {
                 )
 
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
+                    Image(systemName: doc.status.systemImage)
                         .foregroundStyle(doc.status.color)
                     Text(doc.status.label)
                         .font(.system(size: 14, weight: .bold))

@@ -148,7 +148,7 @@ struct ReportDefectView: View {
                         if canSubmit {
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark.circle.fill").foregroundColor(FMSTheme.amberDark)
-                                Text("\(selectedPriority.rawValue) · \(selectedCategory) · \(selectedPlate)")
+                                Text("\(selectedPriority.rawValue) · \(categories.first(where: { $0.value == selectedCategory })?.display ?? selectedCategory) · \(selectedPlate)")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(colorScheme == .dark ? .white : FMSTheme.textPrimary)
                             }
