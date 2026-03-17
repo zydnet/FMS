@@ -34,6 +34,7 @@ struct FleetManagerHomeTab: View {
     @State private var navigateToPreTrip = false
     @State private var navigateToPostTrip = false
     @State private var navigateToProfile = false
+    @State private var navigateToOrders = false
 
     // Mock data
     private let managerName = "Manager"
@@ -65,10 +66,10 @@ struct FleetManagerHomeTab: View {
                     // Quick Actions
                     QuickActionCard(
                         icon: "shippingbox.fill",
-                        title: "Pending Orders",
-                        subtitle: "\(pendingOrders) orders awaiting dispatch",
+                        title: "Orders", // <-- UPDATED TITLE
+                        subtitle: "Manage fleet orders and dispatch",
                         action: {
-                            // Navigate to orders
+                            navigateToOrders = true // <-- ADDED BUTTON ACTION
                         }
                     )
 
@@ -84,6 +85,12 @@ struct FleetManagerHomeTab: View {
             .background(FMSTheme.backgroundPrimary)
             .navigationDestination(isPresented: $navigateToLiveFleet) {
                 LiveVehicleDashboardView()
+            }
+            .navigationDestination(isPresented: $navigateToProfile) {
+                ManagerProfileView()
+            }
+            .navigationDestination(isPresented: $navigateToOrders) { // <-- ADDED DESTINATION
+                OrdersListView()
             }
         }
     }
