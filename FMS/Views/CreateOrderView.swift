@@ -37,9 +37,10 @@ final class LocationSearchViewModel: NSObject, MKLocalSearchCompleterDelegate {
 // MARK: - Location Search Sheet
 struct LocationSearchSheet: View {
     let title: String
-    @Binding var selectedName: String
+    var onSelect: (String, Double?, Double?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var searchVM = LocationSearchViewModel()
+    @State private var isResolving = false // Loading state for coordinate fetch
 
     var body: some View {
         NavigationStack {
@@ -61,21 +62,27 @@ struct LocationSearchSheet: View {
                 } else {
                     ForEach(searchVM.results, id: \.self) { result in
                         Button {
-                            selectedName = result.title + (result.subtitle.isEmpty ? "" : ", \(result.subtitle)")
-                            dismiss()
+                            resolveLocation(result)
                         } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(result.title)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(.primary)
-                                if !result.subtitle.isEmpty {
-                                    Text(result.subtitle)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.secondary)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(result.title)
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(.primary)
+                                    if !result.subtitle.isEmpty {
+                                        Text(result.subtitle)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if isResolving {
+                                    ProgressView().scaleEffect(0.8)
                                 }
                             }
                             .padding(.vertical, 4)
                         }
+                        .disabled(isResolving)
                         .listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
                 }
@@ -93,6 +100,26 @@ struct LocationSearchSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+        }
+    }
+    
+    // Convert autocomplete string into actual Lat/Lng coordinates
+    private func resolveLocation(_ result: MKLocalSearchCompletion) {
+        isResolving = true
+        let request = MKLocalSearch.Request(completion: result)
+        let search = MKLocalSearch(request: request)
+        
+        search.start { response, error in
+            isResolving = false
+            let name = result.title + (result.subtitle.isEmpty ? "" : ", \(result.subtitle)")
+            
+            if let coordinate = response?.mapItems.first?.placemark.coordinate {
+                onSelect(name, coordinate.latitude, coordinate.longitude)
+            } else {
+                // Fallback to just the name if coordinate fetch fails
+                onSelect(name, nil, nil)
+            }
+            dismiss()
         }
     }
 }
@@ -172,11 +199,20 @@ public struct CreateOrderView: View {
     // Form State
     @State private var customerName: String = ""
     @State private var customerPhone: String = ""
-    @State private var customerEmail: String = ""        // Fix: was missing
+    @State private var customerEmail: String = ""
     @State private var weightString: String = ""
     @State private var packagesString: String = ""
+    
+    // Origin State
     @State private var originName: String = ""
+    @State private var originLat: Double? = nil
+    @State private var originLng: Double? = nil
+    
+    // Destination State
     @State private var destinationName: String = ""
+    @State private var destinationLat: Double? = nil
+    @State private var destinationLng: Double? = nil
+    
     @State private var specialInstructions: String = ""
 
     // Typed pickers
@@ -192,160 +228,79 @@ public struct CreateOrderView: View {
     @State private var showingDestinationSearch = false
 
     // MARK: - Derived Validation
-    private var trimmedOrigin: String {
-        originName.trimmingCharacters(in: .whitespaces)
-    }
-    private var trimmedDestination: String {
-        destinationName.trimmingCharacters(in: .whitespaces)
-    }
+    private var trimmedOrigin: String { originName.trimmingCharacters(in: .whitespaces) }
+    private var trimmedDestination: String { destinationName.trimmingCharacters(in: .whitespaces) }
+    
     private var isSameLocation: Bool {
-        !trimmedOrigin.isEmpty &&
-        !trimmedDestination.isEmpty &&
-        trimmedOrigin.lowercased() == trimmedDestination.lowercased()
+        !trimmedOrigin.isEmpty && !trimmedDestination.isEmpty && trimmedOrigin.lowercased() == trimmedDestination.lowercased()
     }
+    
     private var isFormValid: Bool {
         !customerName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !trimmedOrigin.isEmpty &&
         !trimmedDestination.isEmpty &&
         !isSameLocation &&
         (Double(weightString) ?? 0) > 0 &&
-        pickupDate >= Date().addingTimeInterval(-60) &&  // Fix: 60s grace period
+        pickupDate >= Date().addingTimeInterval(-60) &&
         deliveryDate >= pickupDate.addingTimeInterval(60)
     }
 
     public var body: some View {
         NavigationStack {
             Form {
-
                 // MARK: - Customer Information
                 Section(header: Text("Customer Information")) {
-                    fmsField(
-                        title: "Customer Name *",
-                        placeholder: "Enter full name",
-                        icon: "person.fill",
-                        text: $customerName
-                    )
-                    fmsField(
-                        title: "Phone Number",
-                        placeholder: "Enter phone number",
-                        icon: "phone.fill",
-                        text: $customerPhone,
-                        keyboard: .phonePad
-                    )
-                    fmsField(
-                        title: "Email (Optional)",
-                        placeholder: "Enter email address",
-                        icon: "envelope.fill",
-                        text: $customerEmail,
-                        keyboard: .emailAddress
-                    )
+                    fmsField(title: "Customer Name *", placeholder: "Enter full name", icon: "person.fill", text: $customerName)
+                    fmsField(title: "Phone Number", placeholder: "Enter phone number", icon: "phone.fill", text: $customerPhone, keyboard: .phonePad)
+                    fmsField(title: "Email (Optional)", placeholder: "Enter email address", icon: "envelope.fill", text: $customerEmail, keyboard: .emailAddress)
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 // MARK: - Route Details
                 Section(header: Text("Route Details")) {
-                    locationPickerRow(
-                        title: "Origin *",
-                        placeholder: "Search pickup location",
-                        icon: "building.2.fill",
-                        value: originName
-                    ) {
+                    locationPickerRow(title: "Origin *", placeholder: "Search pickup location", icon: "building.2.fill", value: originName) {
                         showingOriginSearch = true
                     }
 
-                    locationPickerRow(
-                        title: "Destination *",
-                        placeholder: "Search drop-off location",
-                        icon: "mappin.and.ellipse",
-                        value: destinationName
-                    ) {
+                    locationPickerRow(title: "Destination *", placeholder: "Search drop-off location", icon: "mappin.and.ellipse", value: destinationName) {
                         showingDestinationSearch = true
                     }
 
                     if isSameLocation {
-                        Label(
-                            "Origin and destination cannot be the same.",
-                            systemImage: "exclamationmark.triangle.fill"
-                        )
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .listRowBackground(Color(.secondarySystemGroupedBackground))
+                        Label("Origin and destination cannot be the same.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundColor(.red).listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
 
-                    DatePicker(
-                        "Requested Pickup",
-                        selection: $pickupDate,
-                        in: Date()...,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                    .onChange(of: pickupDate) { _, newPickup in
-                        if deliveryDate < newPickup.addingTimeInterval(60) {
-                            deliveryDate = newPickup.addingTimeInterval(60)
+                    DatePicker("Requested Pickup", selection: $pickupDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                        .onChange(of: pickupDate) { _, newPickup in
+                            if deliveryDate < newPickup.addingTimeInterval(60) {
+                                deliveryDate = newPickup.addingTimeInterval(60)
+                            }
                         }
-                    }
 
-                    DatePicker(
-                        "Requested Delivery",
-                        selection: $deliveryDate,
-                        in: pickupDate.addingTimeInterval(60)...,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
+                    DatePicker("Requested Delivery", selection: $deliveryDate, in: pickupDate.addingTimeInterval(60)..., displayedComponents: [.date, .hourAndMinute])
 
                     if deliveryDate < pickupDate.addingTimeInterval(60) {
-                        Label(
-                            "Delivery must be at least 1 minute after pickup.",
-                            systemImage: "exclamationmark.triangle.fill"
-                        )
-                        .font(.caption)
-                        .foregroundColor(.red)
+                        Label("Delivery must be at least 1 minute after pickup.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundColor(.red)
                     }
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 // MARK: - Cargo Specifications
                 Section(header: Text("Cargo Specifications")) {
-                    fmsField(
-                        title: "Total Weight (kg) *",
-                        placeholder: "e.g. 500",
-                        icon: "scalemass.fill",
-                        text: $weightString,
-                        keyboard: .decimalPad
-                    )
-                    fmsField(
-                        title: "Packages (Optional)",
-                        placeholder: "Count",
-                        icon: "shippingbox.fill",
-                        text: $packagesString,
-                        keyboard: .numberPad
-                    )
+                    fmsField(title: "Total Weight (kg) *", placeholder: "e.g. 500", icon: "scalemass.fill", text: $weightString, keyboard: .decimalPad)
+                    fmsField(title: "Packages (Optional)", placeholder: "Count", icon: "shippingbox.fill", text: $packagesString, keyboard: .numberPad)
 
-                    dropdownRow(
-                        title: "Cargo Type",
-                        icon: selectedCargoType.systemIcon,
-                        iconColor: selectedCargoType.color,
-                        selectedLabel: selectedCargoType.label
-                    ) {
+                    dropdownRow(title: "Cargo Type", icon: selectedCargoType.systemIcon, iconColor: selectedCargoType.color, selectedLabel: selectedCargoType.label) {
                         ForEach(CargoType.allCases, id: \.self) { type in
-                            Button {
-                                selectedCargoType = type
-                            } label: {
-                                Label(type.label, systemImage: type.systemIcon)
-                            }
+                            Button { selectedCargoType = type } label: { Label(type.label, systemImage: type.systemIcon) }
                         }
                     }
 
-                    dropdownRow(
-                        title: "Priority",
-                        icon: selectedPriority.systemIcon,
-                        iconColor: selectedPriority.color,
-                        selectedLabel: selectedPriority.label
-                    ) {
+                    dropdownRow(title: "Priority", icon: selectedPriority.systemIcon, iconColor: selectedPriority.color, selectedLabel: selectedPriority.label) {
                         ForEach(OrderPriority.allCases, id: \.self) { priority in
-                            Button {
-                                selectedPriority = priority
-                            } label: {
-                                Label(priority.label, systemImage: priority.systemIcon)
-                            }
+                            Button { selectedPriority = priority } label: { Label(priority.label, systemImage: priority.systemIcon) }
                         }
                     }
                 }
@@ -354,8 +309,7 @@ public struct CreateOrderView: View {
                 // MARK: - Additional Information
                 Section(header: Text("Additional Information")) {
                     TextField("Special Instructions...", text: $specialInstructions, axis: .vertical)
-                        .lineLimit(3...6)
-                        .padding(.vertical, 8)
+                        .lineLimit(3...6).padding(.vertical, 8)
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
@@ -370,18 +324,14 @@ public struct CreateOrderView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: submitOrder) {
                         if viewModel.isCreating {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.accentColor)
+                            ProgressView().progressViewStyle(.circular).tint(.accentColor)
                         } else {
-                            Text("Create")
-                                .fontWeight(.semibold)
+                            Text("Create").fontWeight(.semibold)
                         }
                     }
                     .disabled(!isFormValid || viewModel.isCreating)
                 }
             }
-            // Fix: proper writable Binding instead of .constant()
             .alert("Error", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
@@ -391,110 +341,69 @@ public struct CreateOrderView: View {
                 Text(viewModel.errorMessage ?? "")
             }
             .sheet(isPresented: $showingOriginSearch) {
-                LocationSearchSheet(title: "Pickup Location", selectedName: $originName)
+                LocationSearchSheet(title: "Pickup Location") { name, lat, lng in
+                    self.originName = name
+                    self.originLat = lat
+                    self.originLng = lng
+                }
             }
             .sheet(isPresented: $showingDestinationSearch) {
-                LocationSearchSheet(title: "Drop-off Location", selectedName: $destinationName)
+                LocationSearchSheet(title: "Drop-off Location") { name, lat, lng in
+                    self.destinationName = name
+                    self.destinationLat = lat
+                    self.destinationLng = lng
+                }
             }
         }
     }
 
-    // MARK: - Dropdown Row
-    // MARK: - Dropdown Row
+    // MARK: - UI Builders (Remaining Unchanged)
     @ViewBuilder
-    private func dropdownRow<MenuItems: View>(
-        title: String,
-        icon: String,
-        iconColor: Color,
-        selectedLabel: String,
-        @ViewBuilder menuItems: @escaping () -> MenuItems
-    ) -> some View {
-        Menu {
-            menuItems()
-        } label: {
+    private func dropdownRow<MenuItems: View>(title: String, icon: String, iconColor: Color, selectedLabel: String, @ViewBuilder menuItems: @escaping () -> MenuItems) -> some View {
+        Menu { menuItems() } label: {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .foregroundColor(iconColor)
-                    .frame(width: 20)
-
+                Image(systemName: icon).foregroundColor(iconColor).frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(Color(.secondaryLabel))
-
+                    Text(title).font(.caption).foregroundColor(Color(.secondaryLabel))
                     HStack(spacing: 4) {
-                        Text(selectedLabel)
-                            .font(.body)
-                            .foregroundColor(Color(.label))
+                        Text(selectedLabel).font(.body).foregroundColor(Color(.label))
                         Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color(.tertiaryLabel))
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .medium)).foregroundColor(Color(.tertiaryLabel))
                     }
                 }
             }
             .padding(.vertical, 4)
-            .contentShape(Rectangle())   // ensures full row area is tappable
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)             // prevents Form row from stealing the tap
+        .buttonStyle(.plain)
     }
     
-    // MARK: - Location Picker Row
     @ViewBuilder
-    private func locationPickerRow(
-        title: String,
-        placeholder: String,
-        icon: String,
-        value: String,
-        onTap: @escaping () -> Void
-    ) -> some View {
+    private func locationPickerRow(title: String, placeholder: String, icon: String, value: String, onTap: @escaping () -> Void) -> some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .foregroundColor(Color(.secondaryLabel))
-                    .frame(width: 20)
-
+                Image(systemName: icon).foregroundColor(Color(.secondaryLabel)).frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(Color(.secondaryLabel))
-
+                    Text(title).font(.caption).foregroundColor(Color(.secondaryLabel))
                     Text(value.isEmpty ? placeholder : value)
                         .font(.body)
                         .foregroundColor(value.isEmpty ? Color(.placeholderText) : Color(.label))
                         .lineLimit(1)
                 }
-
                 Spacer()
-
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(.tertiaryLabel))
+                Image(systemName: "magnifyingglass").font(.system(size: 14)).foregroundColor(Color(.tertiaryLabel))
             }
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Text Field Builder
     @ViewBuilder
-    private func fmsField(
-        title: String,
-        placeholder: String,
-        icon: String,
-        text: Binding<String>,
-        keyboard: UIKeyboardType = .default
-    ) -> some View {
+    private func fmsField(title: String, placeholder: String, icon: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(Color(.secondaryLabel))
-                .frame(width: 20)
-
+            Image(systemName: icon).foregroundColor(Color(.secondaryLabel)).frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(Color(.secondaryLabel))
-
+                Text(title).font(.caption).foregroundColor(Color(.secondaryLabel))
                 TextField(placeholder, text: text)
                     .keyboardType(keyboard)
                     .foregroundColor(Color(.label))
@@ -513,13 +422,17 @@ public struct CreateOrderView: View {
         let payload = OrderCreatePayload(
             customerName: customerName,
             customerPhone: customerPhone.isEmpty ? nil : customerPhone,
-            customerEmail: customerEmail.isEmpty ? nil : customerEmail,  // Fix: now passed
+            customerEmail: customerEmail.isEmpty ? nil : customerEmail,
             totalWeightKg: weight,
             totalPackages: packages,
             cargoType: selectedCargoType.rawValue,
             priority: selectedPriority.rawValue,
             originName: originName,
+            originLat: originLat,
+            originLng: originLng,
             destinationName: destinationName,
+            destinationLat: destinationLat,
+            destinationLng: destinationLng,
             requestedPickupAt: pickupDate,
             requestedDeliveryAt: deliveryDate,
             specialInstructions: specialInstructions.isEmpty ? nil : specialInstructions

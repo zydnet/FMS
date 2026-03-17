@@ -105,7 +105,10 @@ public struct OrdersListView: View {
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredOrders) { order in
-                                orderCard(for: order)
+                                NavigationLink(destination: OrderDetailView(order: order)) {
+                                    orderCard(for: order)
+                                }
+                                .buttonStyle(.plain) // Prevents iOS from overriding text colors in the card
                             }
                         }
                         .padding(.horizontal, 16)
@@ -139,38 +142,16 @@ public struct OrdersListView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                // All
-                filterChip(
-                    label: "All",
-                    count: viewModel.allOrders.count,
-                    filter: .all
-                )
-                // High Priority
-                filterChip(
-                    label: "High Priority",
-                    count: highPriorityCount,
-                    filter: .highPriority,
-                    badgeColor: FMSTheme.alertRed
-                )
-                // Active
-                filterChip(
-                    label: "Active",
-                    count: activeCount,
-                    filter: .active,
-                    badgeColor: .green
-                )
+                filterChip(label: "All", count: viewModel.allOrders.count, filter: .all)
+                filterChip(label: "High Priority", count: highPriorityCount, filter: .highPriority, badgeColor: FMSTheme.alertRed)
+                filterChip(label: "Active", count: activeCount, filter: .active, badgeColor: .green)
             }
             .padding(.horizontal, 16)
         }
     }
 
     @ViewBuilder
-    private func filterChip(
-        label: String,
-        count: Int,
-        filter: OrderFilter,
-        badgeColor: Color = FMSTheme.amber
-    ) -> some View {
+    private func filterChip(label: String, count: Int, filter: OrderFilter, badgeColor: Color = FMSTheme.amber) -> some View {
         let isSelected = selectedFilter == filter
         Button {
             withAnimation(.snappy) { selectedFilter = filter }
@@ -191,21 +172,16 @@ public struct OrdersListView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
             .foregroundColor(isSelected ? .white : FMSTheme.textPrimary)
-            .background(
-                isSelected
-                    ? (filter == .all ? FMSTheme.amber : badgeColor)
-                    : FMSTheme.cardBackground
-            )
+            .background(isSelected ? (filter == .all ? FMSTheme.amber : badgeColor) : FMSTheme.cardBackground)
             .clipShape(Capsule())
             .overlay(
-                Capsule()
-                    .stroke(isSelected ? Color.clear : FMSTheme.borderLight, lineWidth: 1)
+                Capsule().stroke(isSelected ? Color.clear : FMSTheme.borderLight, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Order Card
+    // MARK: - Refined Order Card (No dual buttons)
     @ViewBuilder
     private func orderCard(for order: Order) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -217,103 +193,53 @@ public struct OrdersListView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 2))
 
                 VStack(alignment: .leading, spacing: 10) {
-                    // Customer Name
-                    Text(order.customerName)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(FMSTheme.textPrimary)
+                    // Header: Customer Name and Chevron
+                    HStack {
+                        Text(order.customerName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(FMSTheme.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(FMSTheme.textTertiary)
+                    }
 
                     // Route
                     VStack(alignment: .leading, spacing: 16) {
                         // Pickup
                         HStack(alignment: .center, spacing: 12) {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 10, height: 10)
+                            Circle().fill(Color.blue).frame(width: 10, height: 10)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("PICKUP")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .kerning(0.8)
-                                    .foregroundColor(.blue)
-                                Text(order.originName ?? "Unknown")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(FMSTheme.textPrimary)
+                                Text("PICKUP").font(.system(size: 11, weight: .bold)).kerning(0.8).foregroundColor(.blue)
+                                Text(order.originName ?? "Unknown").font(.system(size: 15, weight: .semibold)).foregroundColor(FMSTheme.textPrimary)
                             }
                         }
                         
                         // Delivery
                         HStack(alignment: .center, spacing: 12) {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 10, height: 10)
+                            Circle().fill(Color.green).frame(width: 10, height: 10)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("DELIVERY")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .kerning(0.8)
-                                    .foregroundColor(.green)
-                                Text(order.destinationName ?? "Unknown")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(FMSTheme.textPrimary)
+                                Text("DELIVERY").font(.system(size: 11, weight: .bold)).kerning(0.8).foregroundColor(.green)
+                                Text(order.destinationName ?? "Unknown").font(.system(size: 15, weight: .semibold)).foregroundColor(FMSTheme.textPrimary)
                             }
                         }
                     }
                     .padding(.vertical, 4)
 
-                    // Weight + Truck
+                    // Details Footer
                     HStack(spacing: 16) {
-                        Label(
-                            "\(String(format: "%.0f", order.totalWeightKg)) kg",
-                            systemImage: "shippingbox"
-                        )
-                        Label(
-                            "Truck • \(order.orderNumber ?? "—")",
-                            systemImage: "truck.box"
-                        )
+                        Label("\(String(format: "%.0f", order.totalWeightKg)) kg", systemImage: "shippingbox")
+                        
+                        // Show "Pending Assignment" if unassigned, else show ID
+                        if order.isPending {
+                            Label("Pending Assignment", systemImage: "exclamationmark.circle")
+                                .foregroundColor(FMSTheme.alertOrange)
+                        } else {
+                            Label("Trip • \(order.orderNumber ?? "—")", systemImage: "truck.box")
+                        }
                     }
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: order.isPending ? .medium : .regular))
                     .foregroundColor(FMSTheme.textSecondary)
-
-                    Divider()
-
-                    // Action Buttons
-                    HStack(spacing: 12) {
-                        // Left button: context-sensitive
-                        Button {
-                            // assign / track action
-                        } label: {
-                            Text(order.isPending ? "Assign Driver" : "Track")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(FMSTheme.textPrimary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
-                                .background(FMSTheme.backgroundPrimary)
-                                .cornerRadius(10)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(FMSTheme.borderLight, lineWidth: 1)
-                                )
-                        }
-                        .buttonStyle(.plain)
-
-                        // View Details
-                        NavigationLink(destination: Text("Order Detail TBD")) {
-                            HStack(spacing: 4) {
-                                Text("View Details")
-                                    .font(.system(size: 14, weight: .medium))
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .foregroundColor(FMSTheme.textPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 9)
-                            .background(FMSTheme.backgroundPrimary)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(FMSTheme.borderLight, lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
                 }
                 .padding(.vertical, 14)
                 .padding(.trailing, 14)
@@ -333,5 +259,20 @@ public struct OrdersListView: View {
         case "low":    return FMSTheme.textTertiary
         default:       return FMSTheme.borderLight
         }
+    }
+}
+
+// Temporary Stub view for Phase 2 preparation
+public struct OrderDetailView: View {
+    public let order: Order
+    
+    public var body: some View {
+        VStack {
+            Text("Order Details for \(order.customerName)")
+                .font(.headline)
+            Text("Phase 2: Assignment Flow Goes Here")
+                .foregroundColor(.secondary)
+        }
+        .navigationTitle("Order Details")
     }
 }

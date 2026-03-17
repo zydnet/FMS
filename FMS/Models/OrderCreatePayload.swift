@@ -13,7 +13,11 @@ public struct OrderCreatePayload: Encodable {
     public let cargoType: String
     public let priority: String
     public let originName: String
+    public let originLat: Double?
+    public let originLng: Double?
     public let destinationName: String
+    public let destinationLat: Double?
+    public let destinationLng: Double?
     public let requestedPickupAt: Date?
     public let requestedDeliveryAt: Date?
     public let specialInstructions: String?
@@ -27,7 +31,11 @@ public struct OrderCreatePayload: Encodable {
         case cargoType           = "cargo_type"
         case priority
         case originName          = "origin_name"
+        case originLat           = "origin_lat"
+        case originLng           = "origin_lng"
         case destinationName     = "destination_name"
+        case destinationLat      = "destination_lat"
+        case destinationLng      = "destination_lng"
         case requestedPickupAt   = "requested_pickup_at"
         case requestedDeliveryAt = "requested_delivery_at"
         case specialInstructions = "special_instructions"
