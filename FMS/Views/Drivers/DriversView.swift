@@ -268,7 +268,7 @@ private struct FilterChip: View {
       }
       .padding(.horizontal, 14)
       .padding(.vertical, 8)
-      .foregroundStyle(isSelected ? .white : Color(.label))
+      .foregroundStyle(isSelected ? .black : Color(.label))
       .background {
         if isSelected {
           Capsule().fill(FMSTheme.amber)
