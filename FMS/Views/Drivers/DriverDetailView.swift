@@ -72,10 +72,9 @@ struct DriverDetailView: View {
         .disabled(vm.isDeleting)
       }
     }
-    .confirmationDialog(
+    .alert(
       "Delete Driver",
-      isPresented: $showDeleteConfirm,
-      titleVisibility: .visible
+      isPresented: $showDeleteConfirm
     ) {
       Button("Delete", role: .destructive) {
         Task { await vm.deleteDriver() }
