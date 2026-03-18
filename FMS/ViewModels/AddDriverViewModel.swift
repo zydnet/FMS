@@ -5,24 +5,24 @@
 //  Created by devanshi on 12/03/26.
 //
 
-import Combine
 import Foundation
 import Supabase
 
+@Observable
 @MainActor
-class AddDriverViewModel: ObservableObject {
-  @Published var name = ""
-  @Published var email = ""
-  @Published var phone = ""
-  @Published var licenseNumber = ""
-  @Published var dateOfBirth: Date?
+class AddDriverViewModel {
+  var name = ""
+  var email = ""
+  var phone = ""
+  var licenseNumber = ""
+  var dateOfBirth: Date?
   // Default to tomorrow so the field is valid out-of-the-box and the
   // DatePicker's in: Date()... range is immediately satisfied.
-  @Published var licenseExpiry =
+  var licenseExpiry =
     Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-  @Published var isLoading = false
-  @Published var showError = false
-  @Published var errorMessage = ""
+  var isLoading = false
+  var showError = false
+  var errorMessage = ""
 
   // Role passed in from the tab — not user-selectable
   var role: String

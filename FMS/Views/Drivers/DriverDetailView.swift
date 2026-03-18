@@ -22,8 +22,7 @@ struct DriverDetailView: View {
   @State private var showEditDriver = false
 
   init(driver: DriverDisplayItem, onDeleted: (() -> Void)? = nil) {
-    // TODO: In production, pass real vehicle/assignment/trip/logs from parent or repository
-    _vm = State(initialValue: DriverDetailViewModel.mock(from: driver))
+    _vm = State(initialValue: DriverDetailViewModel(driver: driver))
     self.onDeleted = onDeleted
   }
 
@@ -53,10 +52,11 @@ struct DriverDetailView: View {
           }
 
           Button {
-            // TODO: Implement disable driver logic
+            // Suspend flow not implemented yet.
           } label: {
             Label("Disable Driver", systemImage: "person.slash")
           }
+          .disabled(true)
 
           Divider()
 

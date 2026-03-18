@@ -87,7 +87,7 @@ public final class EditDriverViewModel {
 
       self.email = record.email ?? ""
       self.name = record.name
-      if let p = record.phone, !p.isEmpty { self.phone = p }
+      self.phone = record.phone ?? ""
       self.licenseNumber = record.license_number ?? ""
       if let expiryStr = record.license_expiry,
         let parsed = Self.parseDate(expiryStr)
@@ -161,6 +161,7 @@ public final class EditDriverViewModel {
         .from("users")
         .update(payload)
         .eq("id", value: driverId)
+        .eq("is_deleted", value: false)
         .execute()
       saveSuccess = true
     } catch {

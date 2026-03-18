@@ -111,7 +111,7 @@ public final class DriverDetailViewModel {
   /// Updates the locally-displayed driver fields after a successful edit.
   public func applyEdit(name: String, phone: String?) {
     self.driverName = name
-    if let phone { self.phone = phone }
+    self.phone = phone
   }
 
   // MARK: - Computed: Active Trip Guard
@@ -125,14 +125,35 @@ public final class DriverDetailViewModel {
   // MARK: - Delete
 
   /// Soft-deletes the driver by setting is_deleted = true on the users table.
+  ///
+  /// Performs a server-side active-trip check before deleting to prevent race
+  /// conditions where the local `currentTrip` snapshot may be stale.
   @MainActor
   public func deleteDriver() async {
+    // Fast-path: client-side guard (avoids a network round-trip in the common case).
     guard !hasActiveTrip else {
       deleteError = "Driver cannot be deleted while assigned to active trips."
       return
     }
     isDeleting = true
     do {
+      // Server-side authoritative check — catches races where a trip was
+      // assigned after this screen loaded.
+      struct ActiveTripRow: Decodable { let id: String }
+      let activeTrips: [ActiveTripRow] = try await SupabaseService.shared.client
+        .from("trips")
+        .select("id")
+        .eq("driver_id", value: driverId)
+        .in("status", values: ["active", "in_transit"])
+        .execute()
+        .value
+
+      guard activeTrips.isEmpty else {
+        deleteError = "Driver cannot be deleted while assigned to active trips."
+        isDeleting = false
+        return
+      }
+
       struct UpdatePayload: Encodable {
         let is_deleted: Bool
       }
@@ -140,6 +161,7 @@ public final class DriverDetailViewModel {
         .from("users")
         .update(UpdatePayload(is_deleted: true))
         .eq("id", value: driverId)
+        .eq("is_deleted", value: false)
         .execute()
       deleteSuccess = true
     } catch {
