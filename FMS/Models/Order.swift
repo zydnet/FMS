@@ -7,6 +7,18 @@
 
 import Foundation
 
+public struct Waypoint: Codable, Hashable {
+    public let name: String
+    public let lat: Double
+    public let lng: Double
+    
+    public init(name: String, lat: Double, lng: Double) {
+        self.name = name
+        self.lat = lat
+        self.lng = lng
+    }
+}
+
 public struct Order: Codable, Identifiable {
     public let id: String
     public let orderNumber: String?
@@ -23,6 +35,7 @@ public struct Order: Codable, Identifiable {
     public let destinationName: String?
     public let destinationLat: Double?
     public let destinationLng: Double?
+    public let waypoints: [Waypoint]?
     public let requestedPickupAt: Date?
     public let requestedDeliveryAt: Date?
     public let status: String?
@@ -52,6 +65,7 @@ public struct Order: Codable, Identifiable {
         case destinationName    = "destination_name"
         case destinationLat     = "destination_lat"
         case destinationLng     = "destination_lng"
+        case waypoints
         case requestedPickupAt  = "requested_pickup_at"
         case requestedDeliveryAt = "requested_delivery_at"
         case status
@@ -66,8 +80,6 @@ public struct Order: Codable, Identifiable {
         case invoiceNumber      = "invoice_number"
     }
 
-    // MARK: - Computed
-
     public var statusLabel: String {
         switch status?.lowercased() {
         case "pending":    return "Pending"
@@ -80,22 +92,8 @@ public struct Order: Codable, Identifiable {
         }
     }
 
-    /// Only truly unassigned orders need a driver — "confirmed" means already actioned
-    public var isPending: Bool {
-        status?.lowercased() == "pending"
-    }
-
-    public var isConfirmed: Bool {
-        status?.lowercased() == "confirmed"
-    }
-
-    public var isOngoing: Bool {
-        let s = status?.lowercased()
-        return s == "dispatched" || s == "in_transit"
-    }
-
-    public var isCompleted: Bool {
-        let s = status?.lowercased()
-        return s == "delivered" || s == "cancelled"
-    }
+    public var isPending: Bool { status?.lowercased() == "pending" }
+    public var isConfirmed: Bool { status?.lowercased() == "confirmed" }
+    public var isOngoing: Bool { let s = status?.lowercased(); return s == "dispatched" || s == "in_transit" }
+    public var isCompleted: Bool { let s = status?.lowercased(); return s == "delivered" || s == "cancelled" }
 }
