@@ -21,6 +21,7 @@ public struct MonthlyCostSummary: Decodable, Identifiable {
         guard parts.count >= 2,
               let monthNum = Int(parts[1]) else { return month }
         let symbols = Calendar.current.shortMonthSymbols
+        guard monthNum >= 1, monthNum <= symbols.count else { return month }
         let label = symbols[monthNum - 1]
         let year = String(parts[0].suffix(2))
         return "\(label) \(year)"

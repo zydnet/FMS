@@ -39,7 +39,7 @@ public struct UtilizationRow: View {
 
                     Capsule()
                         .fill(tierColor)
-                        .frame(width: geo.size.width * min(vehicle.utilizationPercent / 100, 1.0), height: 8)
+                        .frame(width: geo.size.width * max(min(vehicle.utilizationPercent / 100, 1.0), 0.0), height: 8)
                 }
             }
             .frame(height: 8)

@@ -72,7 +72,9 @@ public final class CostBreakdownViewModel {
       #endif
     } catch {
       self.errorMessage = error.localizedDescription
-      print("Error fetching cost summary: \(error)")
+      #if DEBUG
+        print("Error fetching cost summary: \(error)")
+      #endif
     }
   }
 }

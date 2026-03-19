@@ -68,8 +68,21 @@ public final class HistoricalReportsViewModel {
       }
       let distance = report.distanceKm.map { String(format: "%.1f", $0) } ?? "—"
       let fuel = report.fuelUsedLiters.map { String(format: "%.1f", $0) } ?? "—"
-      csv += "\(dateStr),\(report.plateNumber),\(report.driverName),\(distance),\(fuel)\n"
+      let escapedDate = escapeCSVField(dateStr)
+      let escapedPlate = escapeCSVField(report.plateNumber)
+      let escapedDriver = escapeCSVField(report.driverName)
+      let escapedDistance = escapeCSVField(distance)
+      let escapedFuel = escapeCSVField(fuel)
+      csv += "\(escapedDate),\(escapedPlate),\(escapedDriver),\(escapedDistance),\(escapedFuel)\n"
     }
     return csv
+  }
+
+  private func escapeCSVField(_ value: String) -> String {
+    let containsSpecialCharacters =
+      value.contains(",") || value.contains("\"") || value.contains("\n")
+    guard containsSpecialCharacters else { return value }
+    let escapedQuotes = value.replacingOccurrences(of: "\"", with: "\"\"")
+    return "\"\(escapedQuotes)\""
   }
 }
