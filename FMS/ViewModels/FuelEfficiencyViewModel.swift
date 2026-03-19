@@ -37,6 +37,15 @@ public final class FuelEfficiencyViewModel {
         .execute()
         .value
       self.vehicles = fetched
+      #if DEBUG
+        if let first = fetched.first {
+          print(
+            "Fuel efficiency reports fetched: \(fetched.count). First row -> plate: \(first.plateNumber), km/L: \(first.kmPerLiter)"
+          )
+        } else {
+          print("Fuel efficiency reports fetched: 0 rows")
+        }
+      #endif
     } catch {
       self.errorMessage = error.localizedDescription
       print("Error fetching fuel efficiency: \(error)")

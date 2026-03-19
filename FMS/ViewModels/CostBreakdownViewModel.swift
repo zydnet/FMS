@@ -61,6 +61,15 @@ public final class CostBreakdownViewModel {
         .execute()
         .value
       self.summaries = fetched
+      #if DEBUG
+        if let first = fetched.first {
+          print(
+            "Cost breakdown reports fetched: \(fetched.count). First row -> month: \(first.month), total: \(first.totalCost)"
+          )
+        } else {
+          print("Cost breakdown reports fetched: 0 rows")
+        }
+      #endif
     } catch {
       self.errorMessage = error.localizedDescription
       print("Error fetching cost summary: \(error)")

@@ -36,6 +36,15 @@ public final class HistoricalReportsViewModel {
         .execute()
         .value
       self.reports = fetched
+      #if DEBUG
+        if let first = fetched.first {
+          print(
+            "Historical reports fetched: \(fetched.count). First row -> id: \(first.id), plate: \(first.plateNumber)"
+          )
+        } else {
+          print("Historical reports fetched: 0 rows")
+        }
+      #endif
     } catch {
       self.errorMessage = error.localizedDescription
       print("Error fetching historical reports: \(error)")

@@ -44,6 +44,15 @@ public final class FleetUtilizationViewModel {
         .execute()
         .value
       self.vehicles = fetched
+      #if DEBUG
+        if let first = fetched.first {
+          print(
+            "Fleet utilization reports fetched: \(fetched.count). First row -> plate: \(first.plateNumber), utilization: \(first.utilizationPercent)%"
+          )
+        } else {
+          print("Fleet utilization reports fetched: 0 rows")
+        }
+      #endif
     } catch {
       self.errorMessage = error.localizedDescription
       print("Error fetching fleet utilization: \(error)")
