@@ -8,12 +8,14 @@
 import SwiftUI
 
 public struct LoginView: View {
+    
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(BannerManager.self) private var bannerManager
     
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isLoading: Bool = false
+    @State private var showForgotPassword: Bool = false
     
     // ✅ Check if form is valid
     private var isFormValid: Bool {
@@ -29,13 +31,15 @@ public struct LoginView: View {
     public init() {}
     
     public var body: some View {
+        
         ZStack {
             FMSTheme.backgroundPrimary.ignoresSafeArea()
             
             VStack(spacing: 0) {
+                
                 Spacer()
                 
-                // Logo Icon
+                // Logo
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(FMSTheme.amber)
@@ -53,11 +57,13 @@ public struct LoginView: View {
                 }
                 .padding(.bottom, 24)
                 
-                // App Title
+                
+                // Title
                 Text("FleetPro")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(FMSTheme.textPrimary)
                     .padding(.bottom, 8)
+                
                 
                 // Subtitle
                 Text("Fleet Management System")
@@ -65,9 +71,11 @@ public struct LoginView: View {
                     .foregroundColor(labelColor)
                     .padding(.bottom, 48)
                 
+                
                 VStack(spacing: 18) {
                     
                     // Email
+                    
                     TextField("Email", text: $email)
                         .padding()
                         .background(
@@ -79,6 +87,7 @@ public struct LoginView: View {
                     
                     
                     // Password
+                    
                     SecureField("Password", text: $password)
                         .padding()
                         .background(
@@ -88,7 +97,8 @@ public struct LoginView: View {
                         .foregroundColor(FMSTheme.textPrimary)
                     
                     
-                    // ✅ Login Button with opacity logic
+                    // Login Button
+                    
                     Button {
                         performLogin()
                     } label: {
@@ -117,15 +127,22 @@ public struct LoginView: View {
                             y: 4
                         )
                     }
-                    .opacity(isFormValid ? 1.0 : 0.6) // ✅ opacity change
-                    .disabled(!isFormValid || isLoading) // ✅ disable logic
+                    .opacity(isFormValid ? 1.0 : 0.6)
+                    .disabled(!isFormValid || isLoading)
                     
+                    
+                    // Forgot password
                     
                     Button("Forgot Password?") {
-                        
+                        showForgotPassword = true
                     }
                     .font(.footnote)
                     .foregroundColor(FMSTheme.textSecondary)
+                    .sheet(isPresented: $showForgotPassword) {
+                        ForgotPasswordView()
+                            .environment(authViewModel)
+                            .environment(bannerManager)
+                    }
                     
                 }
                 .padding(24)
@@ -140,9 +157,12 @@ public struct LoginView: View {
                 )
                 .padding(.horizontal, 24)
                 
+                
                 Spacer()
                 
+                
                 // Footer
+                
                 Text("© 2026 FLEETPRO SYSTEMS")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(FMSTheme.textTertiary)
@@ -151,6 +171,8 @@ public struct LoginView: View {
         }
     }
     
+    
+    // ✅ FIXED — outside body
     
     private func performLogin() {
         isLoading = true
