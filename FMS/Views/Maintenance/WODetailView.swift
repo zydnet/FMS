@@ -4,7 +4,7 @@ import Supabase
 
 @MainActor
 public struct WODetailView: View {
-    @State var wo: WOItem
+    @State private var wo: WOItem
     let store: WorkOrderStore
     var isReadOnly: Bool = false
     var onUpdate: (() async -> Void)? = nil
@@ -574,6 +574,13 @@ public struct WODetailView: View {
                 let id = wo.id
                 let sanitized = serviceOdometerInput.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
                 guard let newOdo = Double(sanitized) else { return }
+                
+                // Validate: reject negative or rollbacks
+                let currentOdo = vehicle?.odometer ?? 0
+                if newOdo < 0 || newOdo < currentOdo {
+                    bannerManager.show(type: .error, message: "Odometer cannot be negative or less than current (\(Int(currentOdo)) km).")
+                    return
+                }
                 Task {
                     do {
                         try await store.updateStatus(id, status: .completed, serviceOdometer: newOdo)

@@ -12,6 +12,20 @@ public struct DefectsView: View {
 
     let filters = ["All", "Critical", "High", "Medium", "Low"]
 
+    private var defectCounts: [String: Int] {
+        var counts = ["All": 0, "Critical": 0, "High": 0, "Medium": 0, "Low": 0]
+        for defect in store.defects {
+            counts["All", default: 0] += 1
+            switch defect.priority {
+            case .critical: counts["Critical", default: 0] += 1
+            case .high:     counts["High", default: 0] += 1
+            case .medium:   counts["Medium", default: 0] += 1
+            case .low:      counts["Low", default: 0] += 1
+            }
+        }
+        return counts
+    }
+
     var filteredDefects: [DefectItem] {
         var list = store.defects
         switch selectedFilter {
@@ -77,15 +91,7 @@ public struct DefectsView: View {
                     FMSFilterBar(
                         tabs: filters,
                         selected: $selectedFilter,
-                        counts: {
-                            var dict: [String: Int] = [:]
-                            dict["All"] = store.defects.count
-                            dict["Critical"] = store.defects.filter { $0.priority == .critical }.count
-                            dict["High"] = store.defects.filter { $0.priority == .high }.count
-                            dict["Medium"] = store.defects.filter { $0.priority == .medium }.count
-                            dict["Low"] = store.defects.filter { $0.priority == .low }.count
-                            return dict
-                        }()
+                        counts: defectCounts
                     )
                     Divider().opacity(0.35)
 

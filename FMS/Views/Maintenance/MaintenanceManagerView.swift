@@ -174,7 +174,7 @@ public struct MaintenanceManagerView: View {
             } else {
                 ForEach(filteredVehicles) { vehicle in
                     let hasActiveWO = woStore.orders.contains { 
-                        $0.vehicleIdRaw == vehicle.id && $0.status != .completed && $0.description.hasPrefix("[SERVICE]")
+                        $0.vehicleIdRaw == vehicle.id && $0.status != .completed && $0.isService
                     }
                     
                     if hasActiveWO {

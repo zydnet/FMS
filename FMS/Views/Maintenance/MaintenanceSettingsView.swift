@@ -35,8 +35,12 @@ struct MaintenanceSettingsView: View {
             .task {
                 try? await fleetViewModel.fetchVehicles()
             }
-            .onChange(of: settingsStore.globalIntervalKm) { settingsStore.save() }
-            .onChange(of: settingsStore.globalIntervalMonths) { settingsStore.save() }
+            .onChange(of: settingsStore.globalIntervalKm) { 
+                Task { try? await settingsStore.save() }
+            }
+            .onChange(of: settingsStore.globalIntervalMonths) { 
+                Task { try? await settingsStore.save() }
+            }
         }
     }
     
@@ -84,7 +88,7 @@ struct MaintenanceSettingsView: View {
                     Button {
                         editingVehicle = vehicle
                     } label: {
-                        VehicleOverrideCard(vehicle: vehicle) {
+                        VehicleOverrideCard(vehicle: vehicle, fleetViewModel: fleetViewModel) {
                             try? await fleetViewModel.fetchVehicles()
                         }
                     }
@@ -134,6 +138,7 @@ struct MaintenanceSettingsView: View {
 
 struct VehicleOverrideCard: View {
     let vehicle: Vehicle
+    var fleetViewModel: FleetViewModel
     var onUpdate: () async -> Void
     
     var body: some View {
@@ -184,14 +189,7 @@ struct VehicleOverrideCard: View {
     private func clearOverride() {
         Task {
             do {
-                let update = OverrideUpdate(service_interval_km: nil, service_interval_months: nil)
-                
-                try await SupabaseService.shared.client
-                    .from("vehicles")
-                    .update(update)
-                    .eq("id", value: vehicle.id)
-                    .execute()
-                
+                try await fleetViewModel.clearOverride(for: vehicle.id)
                 await onUpdate()
             } catch {
                 print("Failed to delete override: \(error)")

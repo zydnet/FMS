@@ -161,15 +161,14 @@ struct RecommendationDetailView: View {
         isCreating = true
         Task {
             do {
-                let reason = "[SERVICE] " + MaintenancePredictionService.getStatusReason(for: vehicle)
-                let fullDescription = description + (notes.isEmpty ? "" : "\n\nNotes: \(notes)")
+                let reason = MaintenancePredictionService.getStatusReason(for: vehicle)
+                let fullDetails = description + (notes.isEmpty ? "" : "\n\nNotes: \(notes)")
+                let woDescription = "[SERVICE] \(reason)\n\n\(fullDetails)".trimmingCharacters(in: .whitespacesAndNewlines)
                 
                 var createdById: String? = nil
                 if let session = try? await SupabaseService.shared.client.auth.session {
                     createdById = session.user.id.uuidString
                 }
-                
-                let woDescription = fullDescription.isEmpty ? reason : "[SERVICE] \(fullDescription)"
                 
                 let wo = MaintenanceWorkOrder(
                     id: UUID().uuidString,

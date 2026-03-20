@@ -11,7 +11,7 @@ public class MaintenanceSettingsStore {
     
     public static let shared = MaintenanceSettingsStore()
     
-    private let systemVehicleID = "00000000-0000-0000-0000-000000000000"
+    public static let systemVehicleID = "00000000-0000-0000-0000-000000000000"
     
     private init() {
         // Initial load from UserDefaults for immediate UI, then fetch from DB
@@ -26,7 +26,7 @@ public class MaintenanceSettingsStore {
             let response: [Vehicle] = try await SupabaseService.shared.client
                 .from("vehicles")
                 .select()
-                .eq("id", value: systemVehicleID)
+                .eq("id", value: MaintenanceSettingsStore.systemVehicleID)
                 .execute()
                 .value
             
@@ -43,33 +43,27 @@ public class MaintenanceSettingsStore {
         }
     }
     
-    public func save() {
+    public func save() async throws {
         saveToLocal()
         
-        Task {
-            do {
-                let systemRow = SystemRow(
-                    id: systemVehicleID,
-                    plate_number: "SYSTEM_SETTINGS",
-                    manufacturer: "System",
-                    model: "Maintenance Config",
-                    fuel_type: "petrol",
-                    odometer: 0,
-                    service_interval_km: intervalKmDouble,
-                    service_interval_months: intervalMonthsInt,
-                    status: "inactive"
-                )
-                
-                try await SupabaseService.shared.client
-                    .from("vehicles")
-                    .upsert(systemRow)
-                    .execute()
-                
-                print("MaintenanceSettingsStore: Remote config upserted")
-            } catch {
-                print("MaintenanceSettingsStore: Failed to save remote config: \(error)")
-            }
-        }
+        let systemRow = SystemRow(
+            id: MaintenanceSettingsStore.systemVehicleID,
+            plate_number: "SYSTEM_SETTINGS",
+            manufacturer: "System",
+            model: "Maintenance Config",
+            fuel_type: "petrol",
+            odometer: 0,
+            service_interval_km: intervalKmDouble,
+            service_interval_months: intervalMonthsInt,
+            status: "inactive"
+        )
+        
+        try await SupabaseService.shared.client
+            .from("vehicles")
+            .upsert(systemRow)
+            .execute()
+        
+        print("MaintenanceSettingsStore: Remote config upserted")
     }
     
     private func loadFromLocal() {

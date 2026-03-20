@@ -18,7 +18,8 @@ public struct MaintenanceHistoryView: View {
         
         // Filter by Status
         if selectedFilter != "All" {
-            result = result.filter { $0.status.rawValue.localizedCaseInsensitiveContains(selectedFilter) }
+            let mappedStatus = WOItem.Status.from(selectedFilter)
+            result = result.filter { $0.status == mappedStatus }
         }
         
         // Filter by Search

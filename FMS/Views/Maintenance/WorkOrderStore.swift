@@ -276,6 +276,14 @@ public class WorkOrderStore {
              updatedItem.serviceOdometer = nil
         }
         
+        if status == .completed && updatedItem.isService {
+            // Require a concrete odometer for completion of service orders
+            guard let odo = serviceOdometer else {
+                throw NSError(domain: "WorkOrderStore", code: 400, userInfo: [NSLocalizedDescriptionKey: "Service odometer is required to complete this job."])
+            }
+            updatedItem.serviceOdometer = odo
+        }
+        
         let dbModel = updatedItem.toMaintenanceWorkOrder()
         
         try await SupabaseService.shared.client

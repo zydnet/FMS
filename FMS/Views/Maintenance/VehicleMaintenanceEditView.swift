@@ -31,6 +31,8 @@ struct VehicleMaintenanceEditView: View {
         _serviceIntervalMonths = State(initialValue: "\(vehicle.serviceIntervalMonths ?? MaintenancePredictionService.defaultIntervalMonths)")
     }
     
+    @State private var pendingSave: Task<Void, Never>? = nil
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -63,12 +65,12 @@ struct VehicleMaintenanceEditView: View {
                         .foregroundColor(FMSTheme.amber)
                 }
             }
-            .onChange(of: odometer) { autoSave() }
-            .onChange(of: lastServiceDate) { autoSave() }
-            .onChange(of: lastServiceOdometer) { autoSave() }
-            .onChange(of: maintenanceNotes) { autoSave() }
-            .onChange(of: serviceIntervalKm) { autoSave() }
-            .onChange(of: serviceIntervalMonths) { autoSave() }
+            .onChange(of: odometer) { scheduleAutoSave() }
+            .onChange(of: lastServiceDate) { scheduleAutoSave() }
+            .onChange(of: lastServiceOdometer) { scheduleAutoSave() }
+            .onChange(of: maintenanceNotes) { scheduleAutoSave() }
+            .onChange(of: serviceIntervalKm) { scheduleAutoSave() }
+            .onChange(of: serviceIntervalMonths) { scheduleAutoSave() }
         }
     }
     
@@ -163,29 +165,66 @@ struct VehicleMaintenanceEditView: View {
         }
     }
     
-    private func autoSave() {
-        guard let odoValue = Double(odometer), 
-              let lastOdoValue = Double(lastServiceOdometer),
-              let intervalKm = Double(serviceIntervalKm),
-              let intervalMonths = Int(serviceIntervalMonths) else {
-            return
+    private func scheduleAutoSave() {
+        pendingSave?.cancel()
+        pendingSave = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 500ms debounce
+            if !Task.isCancelled {
+                await autoSave()
+            }
+        }
+    }
+    
+    private func autoSave() async {
+        var updatedVehicle = vehicle
+        
+        // 1. Odometer: only save if changed OR originally present
+        if let odoVal = Double(odometer) {
+            let originalDisplay = String(format: "%.0f", vehicle.odometer ?? 0)
+            if vehicle.odometer != nil || odometer != originalDisplay {
+                updatedVehicle.odometer = odoVal
+            }
         }
         
-        Task {
-            do {
-                var updatedVehicle = vehicle
-                updatedVehicle.odometer = odoValue
-                updatedVehicle.lastServiceDate = lastServiceDate
-                updatedVehicle.lastServiceOdometer = lastOdoValue
-                updatedVehicle.maintenanceNotes = maintenanceNotes
-                updatedVehicle.serviceIntervalKm = intervalKm
-                updatedVehicle.serviceIntervalMonths = intervalMonths
-                
-                try await fleetViewModel.updateVehicle(updatedVehicle)
-                await onUpdate()
-            } catch {
-                print("Auto-save failed: \(error.localizedDescription)")
+        // 2. Last Service Date: only save if changed OR originally present
+        if vehicle.lastServiceDate != nil || lastServiceDate != (vehicle.lastServiceDate ?? Date()) {
+            updatedVehicle.lastServiceDate = lastServiceDate
+        }
+        
+        // 3. Last Service Odometer: only save if changed OR originally present
+        if let lastOdoVal = Double(lastServiceOdometer) {
+            let originalDisplay = String(format: "%.0f", vehicle.lastServiceOdometer ?? 0)
+            if vehicle.lastServiceOdometer != nil || lastServiceOdometer != originalDisplay {
+                updatedVehicle.lastServiceOdometer = lastOdoVal
             }
+        }
+        
+        // 4. Interval KM: only save if changed OR originally present
+        if let intervalKm = Double(serviceIntervalKm) {
+            let originalDisplay = String(format: "%.0f", vehicle.serviceIntervalKm ?? MaintenanceSettingsStore.shared.intervalKmDouble)
+            if vehicle.serviceIntervalKm != nil || serviceIntervalKm != originalDisplay {
+                updatedVehicle.serviceIntervalKm = intervalKm
+            }
+        }
+        
+        // 5. Interval Months: only save if changed OR originally present
+        if let intervalMonths = Int(serviceIntervalMonths) {
+            let originalDisplay = "\(vehicle.serviceIntervalMonths ?? MaintenanceSettingsStore.shared.intervalMonthsInt)"
+            if vehicle.serviceIntervalMonths != nil || serviceIntervalMonths != originalDisplay {
+                updatedVehicle.serviceIntervalMonths = intervalMonths
+            }
+        }
+        
+        // 6. Notes: always sync if changed
+        if maintenanceNotes != (vehicle.maintenanceNotes ?? "") {
+            updatedVehicle.maintenanceNotes = maintenanceNotes
+        }
+        
+        do {
+            try await fleetViewModel.updateVehicle(updatedVehicle)
+            await onUpdate()
+        } catch {
+            print("Auto-save failed: \(error.localizedDescription)")
         }
     }
 }

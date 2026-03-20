@@ -99,7 +99,7 @@ public struct Vehicle: Codable, Identifiable, Hashable, Equatable {
     }
 }
 
-public struct OverrideUpdate: Encodable {
+public struct OverrideUpdate: Codable {
     public let service_interval_km: Double?
     public let service_interval_months: Int?
     
@@ -108,6 +108,12 @@ public struct OverrideUpdate: Encodable {
         self.service_interval_months = service_interval_months
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        service_interval_km = try container.decodeIfPresent(Double.self, forKey: .service_interval_km)
+        service_interval_months = try container.decodeIfPresent(Int.self, forKey: .service_interval_months)
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Explicitly encoding nil to ensure it's sent as 'null' in JSON, not omitted

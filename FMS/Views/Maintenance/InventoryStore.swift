@@ -41,7 +41,7 @@ public struct PartItem: Identifiable {
     }
 
     // Manual memberwise init (for in-app creation)
-    public init(id: UUID, name: String, partNumber: String, stock: Int, minStock: Int,
+    public init(id: UUID, name: String, stock: Int, minStock: Int,
          unitCost: Double? = nil, imageName: String, lastUpdated: Date? = nil) {
         self.id          = id
         self.name        = name

@@ -149,7 +149,8 @@ public struct MaintenanceDashboardView: View {
                             searchText = ""
                         }
                     }
-                }
+                },
+                onAdd: { showingCreateWO = true }
             )
 
             // Dynamic Search Bar
