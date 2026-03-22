@@ -38,6 +38,7 @@ public final class TripExecutionViewModel {
     private var syncRetryCount = 0
     private var isSyncing = false
     private var syncRetryTask: Task<Void, Never>?
+    private var locationUpdatesTask: Task<Void, Never>?
 
     // Hysteresis counters to avoid rapid toggling on GPS drift.
     private var pickupInsideHits = 0
@@ -71,14 +72,24 @@ public final class TripExecutionViewModel {
         observeLocationUpdates()
     }
 
+    public func detachLocationManager() {
+        locationUpdatesTask?.cancel()
+        locationUpdatesTask = nil
+        print("[TripExecution] Detached LocationManager for trip \(tripId)")
+    }
+
+    deinit {
+        // Task will break automatically when self is deallocated due to [weak self] loop guard.
+    }
+
     private func observeLocationUpdates() {
-        Task { [weak self] in
-            while !Task.isCancelled {
-                if let location = self?.locationManager?.currentLocation {
-                    await self?.consume(location: location)
-                }
-                // Poll or wait for next change. Poll is easier than withObservationTracking loop for now.
-                try? await Task.sleep(for: .seconds(2))
+        locationUpdatesTask?.cancel()
+        locationUpdatesTask = Task { [weak self] in
+            guard let updates = self?.locationManager?.locationUpdates() else { return }
+            for await location in updates {
+                if Task.isCancelled { break }
+                guard let self = self else { break }
+                self.consume(location: location)
             }
         }
     }
@@ -98,7 +109,7 @@ public final class TripExecutionViewModel {
     }
 
     public func requestPermissionsAndTracking() {
-        locationManager?.requestWhenInUsePermission()
+        locationManager?.requestAlwaysPermission()
         locationManager?.startUpdating()
     }
 
@@ -131,7 +142,7 @@ public final class TripExecutionViewModel {
         syncTimer = nil
         syncRetryTask?.cancel()
         syncRetryTask = nil
-        locationManager?.stopUpdating()
+        detachLocationManager()
         print("[TripExecution] Stopped location tracking for trip \(tripId)")
     }
 
@@ -150,11 +161,11 @@ public final class TripExecutionViewModel {
 
     public func endTrip() {
         guard canEndTrip else { return }
-        hasEndedTrip = true
         currentPhase = .delivery
         endTime = Date()
         isBreakActive = false
         captureImmediateSample()
+        hasEndedTrip = true
         print("[TripExecution] Trip \(tripId) ended")
         stopTracking()
     }
@@ -175,7 +186,7 @@ public final class TripExecutionViewModel {
         guard samplingTimer == nil else { return }
 
         samplingTimer = Timer.scheduledTimer(withTimeInterval: 45, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.captureImmediateSample()
             }
         }
@@ -187,7 +198,7 @@ public final class TripExecutionViewModel {
     private func setupSyncTimer() {
         syncTimer?.invalidate()
         syncTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 await self?.syncSamplesToSupabase()
             }
         }

@@ -20,10 +20,11 @@ public final class LocationPingService {
     private(set) var tripId: String?
     private(set) var lastPingAt: Date?
     private(set) var pingCount: Int = 0
+    private var isPinging = false
 
     // MARK: - Private
     private var locationManager: LocationManager
-    private var timer: Timer?
+    private var pingTask: Task<Void, Never>?
 
     /// Interval between location pings (seconds). 10 for demo.
     private let pingInterval: TimeInterval = 10
@@ -55,13 +56,13 @@ public final class LocationPingService {
         // Ensure location manager is updating
         locationManager.startUpdating()
         
-        scheduleTimer()
+        startObservation()
     }
 
-    /// Stop pinging and cancel the timer.
+    /// Stop pinging and cancel the observation task.
     public func stop() {
-        timer?.invalidate()
-        timer = nil
+        pingTask?.cancel()
+        pingTask = nil
         print("[LocationPingService] 🛑 Stopped pinging for trip \(tripId ?? "nil") after \(pingCount) pings")
         isRunning = false
         tripId = nil
@@ -69,29 +70,49 @@ public final class LocationPingService {
 
     // MARK: - Private helpers
 
-    private func scheduleTimer() {
-        timer?.invalidate()
-
-        // Attempt an immediate ping if location is already available
-        print("[LocationPingService] ⏳ Attempting immediate first ping...")
-        Task { await pingLocation() }
-
-        // Schedule the repeating timer
-        timer = Timer.scheduledTimer(withTimeInterval: pingInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.pingLocation()
+    private func startObservation() {
+        pingTask?.cancel()
+        
+        pingTask = Task {
+            // Immediate first ping
+            await pingLocation()
+            
+            // Listen for location updates from manager
+            for await location in locationManager.locationUpdates() {
+                if Task.isCancelled { break }
+                
+                // Respect pingInterval
+                let now = Date()
+                if let last = lastPingAt, now.timeIntervalSince(last) < pingInterval {
+                    continue
+                }
+                
+                #if DEBUG
+                print("[LocationPingService] 📥 Received location update from stream, triggering ping")
+                #endif
+                await pingLocation(location)
             }
         }
     }
 
-    private func pingLocation() async {
+    private func pingLocation(_ specificLocation: CLLocation? = nil) async {
+        guard !isPinging else {
+            #if DEBUG
+            print("[LocationPingService] ⏳ Ping already in progress, skipping overlap")
+            #endif
+            return
+        }
+        
+        isPinging = true
+        defer { isPinging = false }
+
         guard let tripId else {
             print("[LocationPingService] ⚠️ No active tripId, skipping ping")
             return
         }
 
-        guard let location = locationManager.currentLocation else {
-            print("[LocationPingService] ⚠️ No location yet (auth=\(locationManager.authorizationStatus.rawValue)). Skipping ping #\(pingCount + 1).")
+        guard let location = specificLocation ?? locationManager.currentLocation else {
+            print("[LocationPingService] ⚠️ No location yet. Skipping ping #\(pingCount + 1).")
             return
         }
 

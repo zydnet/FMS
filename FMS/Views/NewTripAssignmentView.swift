@@ -522,10 +522,10 @@ public struct NewTripAssignmentView: View {
                     .from("orders").select("*").eq("id", value: orderId).execute().value
                 if let order = rows.first {
                     await MainActor.run {
-                        orderNumber    = order.order_number
+                        orderNumber    = order.orderNumber
                         orderWaypoints = order.waypoints ?? []
-                        requestedPickupAt = order.requested_pickup_at
-                        requestedDeliveryAt = order.requested_delivery_at
+                        requestedPickupAt = order.requestedPickupAt
+                        requestedDeliveryAt = order.requestedDeliveryAt
                     }
                 }
             } catch {

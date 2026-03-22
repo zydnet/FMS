@@ -8,6 +8,8 @@ public final class LocationManager: NSObject {
     public private(set) var currentLocation: CLLocation?
     public private(set) var authorizationStatus: CLAuthorizationStatus
     public private(set) var lastError: Error?
+    
+    private var locationContinuation: AsyncStream<CLLocation>.Continuation?
 
     private let manager: CLLocationManager
 
@@ -22,8 +24,8 @@ public final class LocationManager: NSObject {
         manager.pausesLocationUpdatesAutomatically = false
         manager.activityType = .automotiveNavigation
         // Background updates requires Xcode Background Modes capability.
-        // Set to false to prevent crash (CLClientIsBackgroundable error) if not configured.
-        manager.allowsBackgroundLocationUpdates = false
+        manager.allowsBackgroundLocationUpdates = true
+        manager.showsBackgroundLocationIndicator = true
     }
 
     public var isAuthorizedForTrip: Bool {
@@ -54,6 +56,17 @@ public final class LocationManager: NSObject {
     public func stopUpdating() {
         print("[LocationManager] ⏹️ stopUpdatingLocation")
         manager.stopUpdatingLocation()
+    }
+
+    /// Provides an asynchronous stream of location updates.
+    /// Each call creates a new stream that receives all future updates from this manager.
+    public func locationUpdates() -> AsyncStream<CLLocation> {
+        AsyncStream { continuation in
+            locationContinuation = continuation
+            continuation.onTermination = { @Sendable _ in
+                // Standard Observation doesn't strictly need this, but good practice
+            }
+        }
     }
 }
 
@@ -89,6 +102,7 @@ extension LocationManager: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         currentLocation = location
+        locationContinuation?.yield(location)
         #if DEBUG
         print("[LocationManager] 📍 Location update: \(location.coordinate.latitude), \(location.coordinate.longitude)")
         #endif
