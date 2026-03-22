@@ -95,7 +95,7 @@ public final class BreakLogViewModel: NSObject, CLLocationManagerDelegate {
             endLng: endLocation?.coordinate.longitude
         )
 
-        breakLogs.append(log)
+        breakLogs.insert(log, at: 0)
         currentBreakStartTime = nil
         currentBreakElapsedSeconds = 0
 

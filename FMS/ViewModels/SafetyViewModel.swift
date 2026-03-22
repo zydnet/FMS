@@ -118,12 +118,13 @@ public final class SafetyViewModel {
 
     public func checkFatigueWarnings() {
         let level = drivingTimer.fatigueWarningLevel
-        guard level != lastFatigueLevel, level != .none else { return }
+        guard level != lastFatigueLevel else { return }
         lastFatigueLevel = level
 
         switch level {
         case .none:
-            break
+            showFatigueBanner = false
+            return
         case .warning:
             fatigueBannerMessage = "You've been driving for 4 hours. Consider taking a break."
             fatigueBannerIsCritical = false

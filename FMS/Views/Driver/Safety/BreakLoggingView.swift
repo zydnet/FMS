@@ -173,7 +173,7 @@ struct BreakLoggingView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(FMSTheme.textSecondary)
 
-            ForEach(viewModel.breakLogs.suffix(3).reversed()) { log in
+            ForEach(viewModel.breakLogs.prefix(3)) { log in
                 BreakLogRow(log: log)
             }
         }

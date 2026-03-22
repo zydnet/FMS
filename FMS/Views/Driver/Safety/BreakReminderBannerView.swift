@@ -33,12 +33,14 @@ struct BreakReminderBannerView: View {
                     .background(FMSTheme.amber)
                     .cornerRadius(8)
             }
+            .accessibilityLabel("Take Break — driving for \(drivingTime)")
 
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(FMSTheme.textTertiary)
-                    .padding(6)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
         }
         .padding(.horizontal, 16)
