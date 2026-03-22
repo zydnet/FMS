@@ -24,6 +24,8 @@ public struct NewTripAssignmentView: View {
     @State private var tripVehicle: Vehicle? = nil
     @State private var orderNumber: String? = nil
     @State private var orderWaypoints: [Waypoint] = []
+    @State private var requestedPickupAt: Date? = nil
+    @State private var requestedDeliveryAt: Date? = nil
     @State private var fetchError: String? = nil
 
     @State private var showTripExecution = false
@@ -77,7 +79,7 @@ public struct NewTripAssignmentView: View {
         ScrollView {
             VStack(spacing: 24) {
 
-                MapCard(stops: activeStops)
+                MapCard(stops: activeStops, onNavigate: openAppleMaps)
                     .frame(height: 240)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
@@ -520,8 +522,10 @@ public struct NewTripAssignmentView: View {
                     .from("orders").select("*").eq("id", value: orderId).execute().value
                 if let order = rows.first {
                     await MainActor.run {
-                        orderNumber    = order.orderNumber
+                        orderNumber    = order.order_number
                         orderWaypoints = order.waypoints ?? []
+                        requestedPickupAt = order.requested_pickup_at
+                        requestedDeliveryAt = order.requested_delivery_at
                     }
                 }
             } catch {
