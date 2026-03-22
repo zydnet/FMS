@@ -181,6 +181,7 @@ public struct VehicleServiceCard: View {
                 }
                 
                 let progress = calculateProgress(vehicle, settingsStore: settingsStore)
+                let safeProgress = progress.isFinite ? min(max(progress, 0), 1) : 0
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("MILEAGE PROGRESS")
@@ -188,7 +189,7 @@ public struct VehicleServiceCard: View {
                             .foregroundColor(FMSTheme.textTertiary)
                             .kerning(0.5)
                         Spacer()
-                        Text("\(Int(progress * 100))%")
+                        Text("\(Int(safeProgress * 100))%")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(FMSTheme.textSecondary)
                     }
@@ -198,7 +199,7 @@ public struct VehicleServiceCard: View {
                             Capsule().fill(FMSTheme.cardBackground.opacity(0.8)).frame(height: 6)
                             Capsule()
                                 .fill(statusColor(status))
-                                .frame(width: geo.size.width * CGFloat(min(progress, 1.0)), height: 6)
+                                .frame(width: geo.size.width * CGFloat(safeProgress), height: 6)
                         }
                     }
                     .frame(height: 6)

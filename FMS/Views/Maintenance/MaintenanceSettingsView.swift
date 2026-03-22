@@ -9,6 +9,7 @@ struct MaintenanceSettingsView: View {
     
     @State private var editingVehicle: Vehicle? = nil
     @State private var isShowingVehiclePicker = false
+    @State private var saveTask: Task<Void, Never>? = nil
     
     var body: some View {
         NavigationStack {
@@ -36,7 +37,12 @@ struct MaintenanceSettingsView: View {
                 try? await fleetViewModel.fetchVehicles()
             }
             .onChange(of: settingsStore.globalIntervalKm) { 
-                Task { try? await settingsStore.save() }
+                saveTask?.cancel()
+                saveTask = Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    guard !Task.isCancelled else { return }
+                    try? await settingsStore.save()
+                }
             }
         }
     }
@@ -81,14 +87,12 @@ struct MaintenanceSettingsView: View {
                     .padding(.vertical, 20)
             } else {
                 ForEach(vehiclesWithOverrides) { vehicle in
-                    Button {
-                        editingVehicle = vehicle
-                    } label: {
-                        VehicleOverrideCard(vehicle: vehicle, fleetViewModel: fleetViewModel) {
-                            try? await fleetViewModel.fetchVehicles()
-                        }
+                    VehicleOverrideCard(vehicle: vehicle, fleetViewModel: fleetViewModel) {
+                        try? await fleetViewModel.fetchVehicles()
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .onTapGesture {
+                        editingVehicle = vehicle
+                    }
                 }
             }
         }
@@ -208,11 +212,13 @@ struct VehiclePickerView: View {
     let vehicles: [Vehicle]
     let onSelect: (Vehicle) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var searchText = ""
     
     var filteredVehicles: [Vehicle] {
-        if searchText.isEmpty { return vehicles }
-        return vehicles.filter { 
+        let realVehicles = vehicles.filter { $0.id != MaintenanceSettingsStore.systemVehicleID }
+        if searchText.isEmpty { return realVehicles }
+        return realVehicles.filter { 
             $0.plateNumber.localizedCaseInsensitiveContains(searchText) ||
             ($0.manufacturer ?? "").localizedCaseInsensitiveContains(searchText) ||
             ($0.model ?? "").localizedCaseInsensitiveContains(searchText)
@@ -221,19 +227,43 @@ struct VehiclePickerView: View {
     
     var body: some View {
         NavigationStack {
-            List(filteredVehicles) { vehicle in
-                Button {
-                    onSelect(vehicle)
-                    dismiss()
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(vehicle.plateNumber).bold()
-                            Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")").font(.caption)
+            ZStack {
+                (colorScheme == .dark ? Color(red: 18/255, green: 18/255, blue: 18/255) : FMSTheme.backgroundPrimary).ignoresSafeArea()
+                
+                List(filteredVehicles) { vehicle in
+                    Button {
+                        onSelect(vehicle)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(vehicle.plateNumber)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(colorScheme == .dark ? .white : FMSTheme.textPrimary)
+                                Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(FMSTheme.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(FMSTheme.amber)
                         }
-                        Spacer()
+                        .padding(16)
+                        .background(FMSTheme.cardBackground)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(FMSTheme.borderLight.opacity(colorScheme == .dark ? 0.15 : 1), lineWidth: 1)
+                        )
                     }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowSeparator(.hidden)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Select Vehicle")
             .navigationBarTitleDisplayMode(.inline)
@@ -241,6 +271,8 @@ struct VehiclePickerView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(FMSTheme.amber)
                 }
             }
         }

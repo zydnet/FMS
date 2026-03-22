@@ -3,6 +3,7 @@ import Observation
 import PostgREST
 import Supabase
 
+@MainActor
 @Observable
 public class MaintenanceSettingsStore {
     public var globalIntervalKm: String = "10000"
@@ -42,6 +43,11 @@ public class MaintenanceSettingsStore {
     }
     
     public func save() async throws {
+        guard !globalIntervalKm.isEmpty, let km = Double(globalIntervalKm), km > 0 else {
+            print("MaintenanceSettingsStore: Invalid input, ignoring save")
+            return
+        }
+        
         saveToLocal()
         
         let systemRow = SystemRow(
