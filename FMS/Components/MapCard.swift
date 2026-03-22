@@ -113,6 +113,11 @@ public struct MapCard: View {
         .onAppear {
             position = mapCameraPosition
         }
+        .onChange(of: stops) { _, _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
+                position = mapCameraPosition
+            }
+        }
         .task(id: stops) {
             await fetchRoutes()
         }
