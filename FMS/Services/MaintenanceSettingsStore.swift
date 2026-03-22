@@ -32,7 +32,7 @@ public class MaintenanceSettingsStore {
             
             if let systemVehicle = response.first {
                 self.globalIntervalKm = String(format: "%.0f", systemVehicle.serviceIntervalKm ?? 10000)
-                self.globalIntervalMonths = String(systemVehicle.serviceIntervalMonths ?? 6)
+                self.globalIntervalMonths = "6" // Default; serviceIntervalMonths removed from Vehicle
                 saveToLocal()
                 print("MaintenanceSettingsStore: Remote config loaded")
             } else {

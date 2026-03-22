@@ -36,7 +36,7 @@ public struct MaintenancePredictionService {
     /// Calculates the maintenance status for a vehicle.
     public static func calculateStatus(for vehicle: Vehicle, defaultKm: Double? = nil, defaultMonths: Int? = nil) -> MaintenanceStatus {
         let rawIntervalKm = vehicle.serviceIntervalKm ?? defaultKm ?? defaultIntervalKm
-        let rawIntervalMonths = vehicle.serviceIntervalMonths ?? defaultMonths ?? defaultIntervalMonths
+        let rawIntervalMonths = defaultMonths ?? defaultIntervalMonths
         
         // Ensure intervals are positive to avoid division by zero or negative logic
         let intervalKm = max(rawIntervalKm, 1.0)
@@ -90,7 +90,7 @@ public struct MaintenancePredictionService {
         if status == .ok { return "Vehicle is in good condition." }
         
         let rawIntervalKm = vehicle.serviceIntervalKm ?? defaultKm ?? defaultIntervalKm
-        let rawIntervalMonths = vehicle.serviceIntervalMonths ?? defaultMonths ?? defaultIntervalMonths
+        let rawIntervalMonths = defaultMonths ?? defaultIntervalMonths
         let intervalKm = max(rawIntervalKm, 1.0)
         let intervalMonths = max(rawIntervalMonths, 1)
         let currentOdo = vehicle.odometer ?? 0

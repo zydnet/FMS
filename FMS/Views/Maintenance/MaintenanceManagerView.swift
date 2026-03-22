@@ -108,7 +108,7 @@ public struct MaintenanceManagerView: View {
     private var statusFilterSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                filterChip(title: "All", count: fleetViewModel.vehicles.count, status: nil)
+                filterChip(title: "All", count: realVehicles.count, status: nil)
                 filterChip(title: "Due", count: dueCount, status: .due)
                 filterChip(title: "Upcoming", count: upcomingCount, status: .upcoming)
                 filterChip(title: "OK", count: okCount, status: .ok)
@@ -192,8 +192,13 @@ public struct MaintenanceManagerView: View {
         }
     }
     
+    /// Real vehicles only — excludes the system settings row
+    private var realVehicles: [Vehicle] {
+        fleetViewModel.vehicles.filter { $0.id != MaintenanceSettingsStore.systemVehicleID }
+    }
+    
     private var filteredVehicles: [Vehicle] {
-        var result = fleetViewModel.vehicles
+        var result = realVehicles
         let settingsStore = MaintenanceSettingsStore.shared
         
         if let statusFilter = selectedStatusFilter {
@@ -219,7 +224,7 @@ public struct MaintenanceManagerView: View {
     
     private var dueCount: Int {
         let settingsStore = MaintenanceSettingsStore.shared
-        return fleetViewModel.vehicles.filter { 
+        return realVehicles.filter { 
             MaintenancePredictionService.calculateStatus(
                 for: $0, 
                 defaultKm: settingsStore.intervalKmDouble, 
@@ -230,7 +235,7 @@ public struct MaintenanceManagerView: View {
     
     private var upcomingCount: Int {
         let settingsStore = MaintenanceSettingsStore.shared
-        return fleetViewModel.vehicles.filter { 
+        return realVehicles.filter { 
             MaintenancePredictionService.calculateStatus(
                 for: $0, 
                 defaultKm: settingsStore.intervalKmDouble, 
@@ -241,7 +246,7 @@ public struct MaintenanceManagerView: View {
     
     private var okCount: Int {
         let settingsStore = MaintenanceSettingsStore.shared
-        return fleetViewModel.vehicles.filter { 
+        return realVehicles.filter { 
             MaintenancePredictionService.calculateStatus(
                 for: $0, 
                 defaultKm: settingsStore.intervalKmDouble, 

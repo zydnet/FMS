@@ -13,9 +13,8 @@ struct VehicleMaintenanceEditView: View {
     @State private var odometer: String = ""
     @State private var lastServiceDate: Date = Date()
     @State private var lastServiceOdometer: String = ""
-    @State private var maintenanceNotes: String = ""
+    @State private var notes: String = ""
     @State private var serviceIntervalKm: String = ""
-    @State private var serviceIntervalMonths: String = ""
     
     @State private var isSaving = false
     
@@ -26,9 +25,8 @@ struct VehicleMaintenanceEditView: View {
         _odometer = State(initialValue: String(format: "%.0f", vehicle.odometer ?? 0))
         _lastServiceDate = State(initialValue: vehicle.lastServiceDate ?? Date())
         _lastServiceOdometer = State(initialValue: String(format: "%.0f", vehicle.lastServiceOdometer ?? 0))
-        _maintenanceNotes = State(initialValue: vehicle.maintenanceNotes ?? "")
+        _notes = State(initialValue: vehicle.notes ?? "")
         _serviceIntervalKm = State(initialValue: String(format: "%.0f", vehicle.serviceIntervalKm ?? MaintenancePredictionService.defaultIntervalKm))
-        _serviceIntervalMonths = State(initialValue: "\(vehicle.serviceIntervalMonths ?? MaintenancePredictionService.defaultIntervalMonths)")
     }
     
     @State private var pendingSave: Task<Void, Never>? = nil
@@ -68,9 +66,8 @@ struct VehicleMaintenanceEditView: View {
             .onChange(of: odometer) { scheduleAutoSave() }
             .onChange(of: lastServiceDate) { scheduleAutoSave() }
             .onChange(of: lastServiceOdometer) { scheduleAutoSave() }
-            .onChange(of: maintenanceNotes) { scheduleAutoSave() }
+            .onChange(of: notes) { scheduleAutoSave() }
             .onChange(of: serviceIntervalKm) { scheduleAutoSave() }
-            .onChange(of: serviceIntervalMonths) { scheduleAutoSave() }
         }
     }
     
@@ -141,8 +138,6 @@ struct VehicleMaintenanceEditView: View {
             
             VStack(spacing: 0) {
                 InputField(title: "Service Interval (km)", text: $serviceIntervalKm, icon: "arrow.left.and.right")
-                Divider().padding(.leading, 44)
-                InputField(title: "Service Interval (months)", text: $serviceIntervalMonths, icon: "calendar.badge.clock")
             }
             .background(FMSTheme.cardBackground)
             .cornerRadius(12)
@@ -156,7 +151,7 @@ struct VehicleMaintenanceEditView: View {
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(FMSTheme.textTertiary)
             
-            TextEditor(text: $maintenanceNotes)
+            TextEditor(text: $notes)
                 .frame(minHeight: 120)
                 .padding(12)
                 .background(FMSTheme.cardBackground)
@@ -207,17 +202,9 @@ struct VehicleMaintenanceEditView: View {
             }
         }
         
-        // 5. Interval Months: only save if changed OR originally present
-        if let intervalMonths = Int(serviceIntervalMonths) {
-            let originalDisplay = "\(vehicle.serviceIntervalMonths ?? MaintenanceSettingsStore.shared.intervalMonthsInt)"
-            if vehicle.serviceIntervalMonths != nil || serviceIntervalMonths != originalDisplay {
-                updatedVehicle.serviceIntervalMonths = intervalMonths
-            }
-        }
-        
-        // 6. Notes: always sync if changed
-        if maintenanceNotes != (vehicle.maintenanceNotes ?? "") {
-            updatedVehicle.maintenanceNotes = maintenanceNotes
+        // 5. Notes: always sync if changed
+        if notes != (vehicle.notes ?? "") {
+            updatedVehicle.notes = notes
         }
         
         do {

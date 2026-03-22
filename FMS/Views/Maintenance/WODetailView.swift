@@ -110,12 +110,23 @@ public struct WODetailView: View {
                                     if !isReadOnly {
                                         HStack(spacing: 8) {
                                             ForEach(WOItem.Status.allCases, id: \.self) { s in
+                                                let isAllowed: Bool = {
+                                                    switch wo.status {
+                                                    case .pending:
+                                                        // From Pending, can only go to In Progress (or stay Pending). Cannot jump to Completed.
+                                                        return s == .pending || s == .inProgress
+                                                    case .inProgress:
+                                                        // From In Progress, can only go to Completed (or stay InProgress). Cannot go backward to Pending.
+                                                        return s == .inProgress || s == .completed
+                                                    case .completed:
+                                                        // From Completed, cannot go back anywhere.
+                                                        return s == .completed
+                                                    }
+                                                }()
+                                                
                                                 Button {
                                                     // Strict Flow: Pending -> In Progress -> Completed
-                                                    if s == .completed && wo.status == .pending {
-                                                        bannerManager.show(type: .warning, message: "Start the job first before completion.")
-                                                        return
-                                                    }
+                                                    if !isAllowed { return }
                                                     
                                                     let newState = s
                                                     if newState == .completed && wo.status != .completed {
@@ -160,10 +171,11 @@ public struct WODetailView: View {
                                                     Text(s.rawValue).font(.system(size: 12, weight: .semibold))
                                                         .frame(maxWidth: .infinity).padding(.vertical, 10)
                                                         .background(wo.status == s ? s.color : Color.gray.opacity(0.1))
-                                                        .foregroundColor(wo.status == s ? .white : (s == .completed && wo.status == .pending ? FMSTheme.textTertiary : FMSTheme.textSecondary))
+                                                        .foregroundColor(wo.status == s ? .white : (!isAllowed ? FMSTheme.textTertiary : FMSTheme.textSecondary))
                                                         .cornerRadius(9)
-                                                        .opacity(s == .completed && wo.status == .pending ? 0.5 : 1.0)
+                                                        .opacity(!isAllowed ? 0.3 : 1.0)
                                                 }
+                                                .disabled(!isAllowed)
                                             }
                                         }
                                     } else {

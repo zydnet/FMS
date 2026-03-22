@@ -52,7 +52,6 @@ public class FleetViewModel {
             let fetchedVehicles: [Vehicle] = try await SupabaseService.shared.client
                 .from("vehicles")
                 .select()
-                .neq("id", value: MaintenanceSettingsStore.systemVehicleID) // Hide system settings row
                 .order("created_at", ascending: false)
                 .execute()
                 .value
@@ -104,49 +103,11 @@ public class FleetViewModel {
                 .eq("id", value: vehicle.id)
                 .execute()
             
-            // Update local state in-place to avoid full refetch on every keystroke
-            if let index = vehicles.firstIndex(where: { $0.id == vehicle.id }) {
-                vehicles[index] = vehicle
-            }
-            self.errorMessage = nil
+            try await fetchVehicles()
         } catch {
             self.errorMessage = error.localizedDescription
             print("Error updating vehicle: \(error)")
             throw mapVehicleMutationError(error)
-        }
-    }
-
-    @MainActor
-    public func clearAllOverrides() async throws {
-        do {
-            let update = OverrideUpdate(service_interval_km: nil, service_interval_months: nil)
-            try await SupabaseService.shared.client
-                .from("vehicles")
-                .update(update)
-                .neq("id", value: MaintenanceSettingsStore.systemVehicleID) // Update all except system
-                .execute()
-            
-            try await fetchVehicles()
-        } catch {
-            print("Error clearing overrides: \(error)")
-            throw error
-        }
-    }
-
-    @MainActor
-    public func clearOverride(for vehicleId: String) async throws {
-        do {
-            let update = OverrideUpdate(service_interval_km: nil, service_interval_months: nil)
-            try await SupabaseService.shared.client
-                .from("vehicles")
-                .update(update)
-                .eq("id", value: vehicleId)
-                .execute()
-            
-            try await fetchVehicles()
-        } catch {
-            print("Error clearing override for \(vehicleId): \(error)")
-            throw error
         }
     }
 

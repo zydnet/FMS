@@ -130,7 +130,7 @@ struct MaintenanceSettingsView: View {
     }
     
     private var vehiclesWithOverrides: [Vehicle] {
-        fleetViewModel.vehicles.filter { $0.serviceIntervalKm != nil || $0.serviceIntervalMonths != nil }
+        fleetViewModel.vehicles.filter { $0.id != MaintenanceSettingsStore.systemVehicleID && $0.serviceIntervalKm != nil }
     }
     
     // loadGlobalDefaults and saveGlobalDefaults moved to MaintenanceSettingsStore
@@ -175,7 +175,7 @@ struct VehicleOverrideCard: View {
                     Text("Month Interval")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(FMSTheme.textTertiary)
-                    Text("\(vehicle.serviceIntervalMonths ?? 0) months")
+                    Text("\(MaintenanceSettingsStore.shared.intervalMonthsInt) months")
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
@@ -189,7 +189,9 @@ struct VehicleOverrideCard: View {
     private func clearOverride() {
         Task {
             do {
-                try await fleetViewModel.clearOverride(for: vehicle.id)
+                var updated = vehicle
+                updated.serviceIntervalKm = nil
+                try await fleetViewModel.updateVehicle(updated)
                 await onUpdate()
             } catch {
                 print("Failed to delete override: \(error)")
