@@ -285,7 +285,6 @@
 				DEVELOPMENT_TEAM = 72B76SWRDS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location required to record breaks.";
 
 				INFOPLIST_KEY_CFBundleDisplayName = FleetPro;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used to scan driver's licenses, fuel receipts, and capture issue report photos.";
@@ -328,7 +327,6 @@ INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location required to record
 				DEVELOPMENT_TEAM = 72B76SWRDS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location required to record breaks.";
 
 				INFOPLIST_KEY_CFBundleDisplayName = FleetPro;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is used to scan driver's licenses, fuel receipts, and capture issue report photos.";

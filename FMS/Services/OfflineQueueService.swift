@@ -63,7 +63,7 @@ public final class OfflineQueueService {
         }
     }
 
-    /// Attempt Supabase update. On failure, queue for retry (will fallback to insert queue in offline mode right now to avoid schema split, but valid for DB syncing).
+    /// Attempt Supabase update. On failure, queue the payload for retry via processQueue.
     public func updateOrQueue<T: Encodable>(
         table: String,
         payload: T,
@@ -78,8 +78,8 @@ public final class OfflineQueueService {
                 .execute()
             return true
         } catch {
-            print("❌ [OfflineQueue] Update Failed: \(error.localizedDescription)")
-            // Future revision: add separate update queue. Fallback strictly required for now.
+            print("❌ [OfflineQueue] Update Failed — queuing for retry: \(error.localizedDescription)")
+            enqueue(table: table, payload: payload, type: payloadType)
             return false
         }
     }

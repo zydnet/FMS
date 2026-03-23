@@ -193,8 +193,12 @@ public final class BreakLogViewModel: NSObject, CLLocationManagerDelegate {
                 self.isOnBreak = true
                 self.currentBreakStartTime = openBreak.startTime
                 self.currentBreakId = openBreak.id
-                // Use default .rest if main upstream removed .BreakType enum constructor
-                self.selectedBreakType = .rest
+                // Restore actual break type from persisted record, fall back to .rest
+                if let storedType = openBreak.breakType, let breakType = BreakType(rawValue: storedType) {
+                    self.selectedBreakType = breakType
+                } else {
+                    self.selectedBreakType = .rest
+                }
                 
                 // Resume elapsed counting via standard start dispatch
                 timer?.invalidate()
@@ -203,6 +207,17 @@ public final class BreakLogViewModel: NSObject, CLLocationManagerDelegate {
                         guard let self, let start = self.currentBreakStartTime else { return }
                         self.currentBreakElapsedSeconds = Date().timeIntervalSince(start)
                     }
+                }
+            } else {
+                // Server confirms no ongoing break — clear any stale local state
+                if isOnBreak {
+                    timer?.invalidate()
+                    timer = nil
+                    isOnBreak = false
+                    currentBreakStartTime = nil
+                    currentBreakId = nil
+                    currentBreakElapsedSeconds = 0
+                    selectedBreakType = .rest
                 }
             }
         } catch {
