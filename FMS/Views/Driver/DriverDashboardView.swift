@@ -286,8 +286,5 @@ private struct SOSSentBanner: View {
                 onDismiss()
             }
         }
-        .task {
-            await viewModel.fetchLiveDashboardData()
-        }
     }
 }
