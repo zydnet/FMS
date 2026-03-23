@@ -23,9 +23,15 @@ public final class LocationManager: NSObject {
         manager.distanceFilter = 10
         manager.pausesLocationUpdatesAutomatically = false
         manager.activityType = .automotiveNavigation
-        // Background updates requires Xcode Background Modes capability.
-        manager.allowsBackgroundLocationUpdates = true
-        manager.showsBackgroundLocationIndicator = true
+        #if !targetEnvironment(simulator)
+        let backgroundModes = Bundle.main.infoDictionary?["UIBackgroundModes"] as? [String] ?? []
+        if backgroundModes.contains("location") {
+            manager.allowsBackgroundLocationUpdates = true
+            manager.showsBackgroundLocationIndicator = true
+        } else {
+            print("[LocationManager] ⚠️ UIBackgroundModes does not contain 'location' — background tracking disabled.")
+        }
+        #endif
     }
 
     public var isAuthorizedForTrip: Bool {
