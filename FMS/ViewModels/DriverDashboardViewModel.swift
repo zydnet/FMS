@@ -153,6 +153,9 @@ public final class DriverDashboardViewModel {
                     phone: p.phone ?? "N/A",
                     availabilityStatus: currentStatus
                 )
+                
+                // Fetch break logs explicitly for this driver to populate history and resume any active breaks
+                await self.breakLogViewModel.loadBreaks(driverId: currentUserId)
             }
 
             let allTrips: [Trip] = try await SupabaseService.shared.client
