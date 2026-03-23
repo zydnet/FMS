@@ -174,7 +174,7 @@ public struct FleetReportView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(isActive ? FMSTheme.amber.opacity(0.3) : FMSTheme.borderLight, lineWidth: 1)
         )
-        .cornerRadius(20)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
     
     // MARK: - Metrics Grid
