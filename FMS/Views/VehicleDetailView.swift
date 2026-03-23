@@ -83,6 +83,7 @@ public struct VehicleDetailView: View {
             switch target {
             case .pastTrips:
                 PastTripsListView(
+                    vehicleId: currentVehicle.id,
                     trips: pastTrips,
                     isLoading: viewModel.isLoadingTrips,
                     errorMessage: viewModel.tripsErrorMessage
