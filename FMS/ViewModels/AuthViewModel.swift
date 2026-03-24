@@ -62,7 +62,10 @@ public class AuthViewModel {
             if mfaStatus.nextLevel == "aal2" {
                 // MFA is required. Switch to MFA state.
                 let factors = try await SupabaseService.shared.client.auth.mfa.listFactors()
-                if let firstFactor = factors.totp.first {
+                let verifiedTotp = factors.totp
+                    .filter { $0.status == .verified }
+                    .sorted { $0.updatedAt > $1.updatedAt }
+                if let firstFactor = verifiedTotp.first {
                     self.mfaFactorId = firstFactor.id
                     self.isMFARequired = true
                     // Do not set isAuthenticated yet
@@ -72,7 +75,7 @@ public class AuthViewModel {
                     self.mfaFactorId = nil
                     bannerManager.show(
                         type: .error,
-                        message: "MFA required but no TOTP factors available. Please contact admin."
+                        message: "MFA required but no verified TOTP factors available. Please contact admin."
                     )
                     return
                 }
@@ -125,7 +128,8 @@ public class AuthViewModel {
             case "maintenance":
                 self.selectedRole = .maintenance
             default:
-                print("Unknown role: \(userRecord.role)")
+                bannerManager.show(type: .error, message: "Unknown role: \(userRecord.role). Please contact admin.")
+                await logout()
                 return
             }
             self.isAuthenticated = true

@@ -168,6 +168,7 @@ public struct ProfileTabView: View {
                         }
                     ))
                     .tint(FMSTheme.amber)
+                    .accessibilityLabel("Two-Factor Authentication")
                 }
             }
         }

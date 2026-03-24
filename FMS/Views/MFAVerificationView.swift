@@ -91,19 +91,28 @@ struct MFAVerificationView: View {
             .textInputAutocapitalization(recoveryMode == .backupCode ? .never : .characters)
             .autocorrectionDisabled()
             .onChange(of: code) { _, newValue in
-                guard recoveryMode != .backupCode else { return }
-                let filtered = newValue.filter { $0.isNumber }
-                let limited = String(filtered.prefix(6))
-                if limited != newValue {
-                    code = limited
+                if recoveryMode == .backupCode {
+                    let normalized = newValue
+                        .lowercased()
+                        .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+                    let limited = String(normalized.prefix(10))
+                    if limited != newValue {
+                        code = limited
+                    }
+                } else {
+                    let filtered = newValue.filter { $0.isNumber }
+                    let limited = String(filtered.prefix(6))
+                    if limited != newValue {
+                        code = limited
+                    }
                 }
             }
             .onChange(of: recoveryMode) { _, newValue in
-                if newValue != .backupCode {
+                if newValue == .backupCode {
+                    code = ""
+                } else {
                     let filtered = code.filter { $0.isNumber }
                     code = String(filtered.prefix(6))
-                } else {
-                    code = ""
                 }
             }
     }
@@ -138,7 +147,10 @@ struct MFAVerificationView: View {
         .frame(height: 54)
         .background(FMSTheme.amber)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .disabled((code.isEmpty || isVerifying) || (recoveryMode != .backupCode && code.count != 6))
+        .disabled(
+            isVerifying ||
+            (recoveryMode == .backupCode ? code.count != 10 : code.count != 6)
+        )
     }
     
     // MARK: - Recovery Options

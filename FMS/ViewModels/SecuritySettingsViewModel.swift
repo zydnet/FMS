@@ -53,6 +53,7 @@ public final class SecuritySettingsViewModel {
     public func initiateMFAEnrollment() async {
         isEnrollingMFA = true
         errorMessage = nil
+        mfaEnrollmentResponse = nil
         defer { isEnrollingMFA = false }
         
         do {
@@ -73,6 +74,7 @@ public final class SecuritySettingsViewModel {
             self.mfaEnrollmentResponse = response
         } catch {
             errorMessage = "Failed to initiate MFA enrollment: \(error.localizedDescription)"
+            mfaEnrollmentResponse = nil
         }
     }
     
@@ -95,6 +97,13 @@ public final class SecuritySettingsViewModel {
             return true
         } catch {
             bannerManager.show(type: .warning, message: "MFA Activated, but failed to save backup codes. \(error.localizedDescription)")
+            do {
+                try await SupabaseService.shared.client.auth.mfa.unenroll(
+                    params: MFAUnenrollParams(factorId: factorId)
+                )
+            } catch {
+                print("Failed to rollback MFA factor: \(error)")
+            }
             await setTwoFactorEnabled(false)
             return false
         }
