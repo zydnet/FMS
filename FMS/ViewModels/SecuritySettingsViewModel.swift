@@ -54,6 +54,7 @@ public final class SecuritySettingsViewModel {
         isEnrollingMFA = true
         errorMessage = nil
         mfaEnrollmentResponse = nil
+        recoveryCodes = []
         defer { isEnrollingMFA = false }
         
         do {
@@ -97,14 +98,18 @@ public final class SecuritySettingsViewModel {
             return true
         } catch {
             bannerManager.show(type: .warning, message: "MFA Activated, but failed to save backup codes. \(error.localizedDescription)")
+            var unenrollSucceeded = false
             do {
                 try await SupabaseService.shared.client.auth.mfa.unenroll(
                     params: MFAUnenrollParams(factorId: factorId)
                 )
+                unenrollSucceeded = true
             } catch {
                 print("Failed to rollback MFA factor: \(error)")
             }
-            try? await setTwoFactorEnabled(false)
+            if unenrollSucceeded {
+                try? await setTwoFactorEnabled(false)
+            }
             recoveryCodes = []
             return false
         }
@@ -113,15 +118,18 @@ public final class SecuritySettingsViewModel {
     public func unenrollAllMFAFactors(bannerManager: BannerManager) async {
         do {
             let factorsResponse = try await SupabaseService.shared.client.auth.mfa.listFactors()
+            var didUnenroll = false
             for factor in factorsResponse.all where factor.factorType == "totp" {
                 try await SupabaseService.shared.client.auth.mfa.unenroll(params: MFAUnenrollParams(factorId: factor.id))
+                didUnenroll = true
             }
             
-            try await setTwoFactorEnabled(false)
+            if didUnenroll {
+                try await setTwoFactorEnabled(false)
+            }
             bannerManager.show(type: .success, message: "Two-factor authentication disabled limitlessly.")
         } catch {
             bannerManager.show(type: .error, message: "Failed to disable MFA: \(error.localizedDescription)")
-            try? await setTwoFactorEnabled(true)
         }
     }
     

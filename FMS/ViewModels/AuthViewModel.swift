@@ -87,9 +87,12 @@ public class AuthViewModel {
             }
             
             // If no MFA required, proceed to load user record
-            try await completeLogin(bannerManager: bannerManager)
+            let loginSucceeded = try await completeLogin(bannerManager: bannerManager)
+            if !loginSucceeded {
+                return
+            }
         } catch {
-            try? await SupabaseService.shared.client.auth.signOut()
+            await logout()
             bannerManager.show(
                 type: .error,
                 message: "An error occurred during post-authentication. Please try again."
@@ -97,57 +100,66 @@ public class AuthViewModel {
         }
     }
     
-    private func completeLogin(bannerManager: BannerManager) async throws {
-        let session = try await SupabaseService.shared.client.auth.session
-        let userId = session.user.id.uuidString
-        let response = try await SupabaseService.shared.client
-            .from("users")
-            .select()
-            .eq("id", value: userId)
-            .limit(1)
-            .execute()
+    private func completeLogin(bannerManager: BannerManager, shouldSetAuthenticated: Bool = true) async throws -> Bool {
+        do {
+            let session = try await SupabaseService.shared.client.auth.session
+            let userId = session.user.id.uuidString
+            let response = try await SupabaseService.shared.client
+                .from("users")
+                .select()
+                .eq("id", value: userId)
+                .limit(1)
+                .execute()
+                
+            let decoder = JSONDecoder()
+            let dateFormatter = DateFormatter()
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
             
-        let decoder = JSONDecoder()
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
-            let dateStr = try container.decode(String.self)
-            
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-            if let date = dateFormatter.date(from: dateStr) { return date }
-            
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-            if let date = dateFormatter.date(from: dateStr) { return date }
-            
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            if let date = dateFormatter.date(from: dateStr) { return date }
-            
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format: \(dateStr)")
-        }
-            
-        let query = try decoder.decode([User].self, from: response.data)
-        
-        if let userRecord = query.first {
-            self.currentUser = userRecord
-            switch userRecord.role {
-            case "manager":
-                self.selectedRole = .fleetManager
-            case "driver":
-                self.selectedRole = .driver
-            case "maintenance":
-                self.selectedRole = .maintenance
-            default:
-                bannerManager.show(type: .error, message: "Unknown role: \(userRecord.role). Please contact admin.")
-                await logout()
-                return
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateStr = try container.decode(String.self)
+                
+                dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+                if let date = dateFormatter.date(from: dateStr) { return date }
+                
+                dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                if let date = dateFormatter.date(from: dateStr) { return date }
+                
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                if let date = dateFormatter.date(from: dateStr) { return date }
+                
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format: \(dateStr)")
             }
-            self.isAuthenticated = true
-            self.isMFARequired = false
-        } else {
-            bannerManager.show(type: .error, message: "Account not configured. Please contact admin.")
+                
+            let query = try decoder.decode([User].self, from: response.data)
+            
+            if let userRecord = query.first {
+                self.currentUser = userRecord
+                switch userRecord.role {
+                case "manager":
+                    self.selectedRole = .fleetManager
+                case "driver":
+                    self.selectedRole = .driver
+                case "maintenance":
+                    self.selectedRole = .maintenance
+                default:
+                    bannerManager.show(type: .error, message: "Unknown role: \(userRecord.role). Please contact admin.")
+                    await logout()
+                    return false
+                }
+                if shouldSetAuthenticated {
+                    self.isAuthenticated = true
+                }
+                self.isMFARequired = false
+                return true
+            } else {
+                bannerManager.show(type: .error, message: "Account not configured. Please contact admin.")
+                await logout()
+                return false
+            }
+        } catch {
             await logout()
+            throw error
         }
     }
 
@@ -158,11 +170,20 @@ public class AuthViewModel {
             try await SupabaseService.shared.client.auth.mfa.challengeAndVerify(
                 params: MFAChallengeAndVerifyParams(factorId: factorId, code: code)
             )
-            
-            // Successfully verified! Completing login.
-            try await completeLogin(bannerManager: bannerManager)
         } catch {
             bannerManager.show(type: .error, message: "Invalid 2FA code. Please try again.")
+            return
+        }
+        
+        do {
+            let loginSucceeded = try await completeLogin(bannerManager: bannerManager)
+            if !loginSucceeded {
+                await logout()
+                bannerManager.show(type: .error, message: "Post-authentication failed. Please log in again.")
+            }
+        } catch {
+            await logout()
+            bannerManager.show(type: .error, message: "Post-authentication failed. Please log in again.")
         }
     }
     
@@ -209,17 +230,23 @@ public class AuthViewModel {
             let valid = try await MFARecoveryService.shared.validateBackupCode(userId: userId, code: code)
             
             if valid {
-                try await completeLogin(bannerManager: bannerManager)
+                let loginSucceeded = try await completeLogin(bannerManager: bannerManager, shouldSetAuthenticated: false)
+                if !loginSucceeded {
+                    return
+                }
                 let consumed = try await MFARecoveryService.shared.consumeBackupCode(userId: userId, code: code)
                 if consumed {
+                    self.isAuthenticated = true
                     bannerManager.show(type: .success, message: "Backup code verified successfully. Logging you in.")
                 } else {
-                    bannerManager.show(type: .warning, message: "Logged in, but failed to consume backup code. Please contact admin.")
+                    await logout()
+                    bannerManager.show(type: .error, message: "Failed to consume backup code. Please log in again.")
                 }
             } else {
                 bannerManager.show(type: .error, message: "Invalid or already used backup code.")
             }
         } catch {
+            await logout()
             bannerManager.show(type: .error, message: "Verification failed: \(error.localizedDescription)")
         }
     }
@@ -227,7 +254,7 @@ public class AuthViewModel {
     
     public func sendPasswordReset(email: String, bannerManager: BannerManager) async -> Bool { // ✅ return Bool
         
-        // ✅ Add email validation (mirrors login)
+        // Add email validation (mirrors login)
         guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
             bannerManager.show(type: .error, message: "Please enter your email address.")
             return false
@@ -238,7 +265,7 @@ public class AuthViewModel {
             return false
         }
         
-        // ✅ Safe URL unwrap instead of force unwrap
+        // Safe URL unwrap instead of force unwrap
         guard let redirectURL = URL(string: "com.nirvaan.fms://reset-password") else {
             bannerManager.show(type: .error, message: "Invalid configuration. Please contact support.")
             return false
@@ -250,10 +277,10 @@ public class AuthViewModel {
                 redirectTo: redirectURL
             )
             bannerManager.show(type: .success, message: "Reset link sent to \(email)")
-            return true  // ✅
+            return true  
         } catch {
             bannerManager.show(type: .error, message: error.localizedDescription)
-            return false  // ✅
+            return false  
         }
     }
     
