@@ -22,7 +22,7 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
     public var sendFailed: Bool = false
     public var alertStatus: SOSAlertStatus = .active
     public var isAcknowledged: Bool { alertStatus == .acknowledged }
-    public var isResolved: Bool     { alertStatus == .resolved }
+    public var isResolved: Bool { alertStatus == .resolved }
     
     // MARK: - Error Handling State
     public var errorMessage: String? = nil
@@ -40,14 +40,14 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
     private var sosAlertId: String?
     private var statusPollTask: Task<Void, Never>?
 
-    private let driverId:  String
+    private let driverId: String
     private let vehicleId: String
-    private let tripId:    String?
+    private let tripId: String?
 
     public init(driverId: String, vehicleId: String, tripId: String? = nil) {
-        self.driverId  = driverId
+        self.driverId = driverId
         self.vehicleId = vehicleId
-        self.tripId    = tripId
+        self.tripId = tripId
         super.init()
         setupLocationManager()
     }
@@ -79,39 +79,39 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
 
     public func cancelCountdown() {
         countdownTask?.cancel()
-        countdownTask       = nil
+        countdownTask = nil
         countdownTargetDate = nil
-        state               = .idle
+        state = .idle
     }
 
     public func sendSOS() {
         countdownTask?.cancel()
-        countdownTask       = nil
+        countdownTask = nil
         countdownTargetDate = nil
-        state               = .sending
-        sendFailed          = false
-        errorMessage        = nil
-        showError           = false
+        state = .sending
+        sendFailed = false
+        errorMessage = nil
+        showError = false
 
         beginBackgroundTask()
 
-        let lat   = currentLocation?.coordinate.latitude  ?? 0
-        let lng   = currentLocation?.coordinate.longitude ?? 0
+        let lat = currentLocation?.coordinate.latitude ?? 0
+        let lng = currentLocation?.coordinate.longitude ?? 0
         let speed = currentLocation?.speed ?? 0
 
         let alertId = UUID().uuidString
-        sosAlertId  = alertId
+        sosAlertId = alertId
 
         let alert = SOSAlertInsert(
-            id:        alertId,
-            driverId:  driverId,
+            id: alertId,
+            driverId: driverId,
             vehicleId: vehicleId,
-            tripId:    tripId,
-            latitude:  lat,
+            tripId: tripId,
+            latitude: lat,
             longitude: lng,
-            speed:     max(0, speed * 3.6),
+            speed: max(0, speed * 3.6),
             timestamp: Date(),
-            status:    .active
+            status: .active
         )
 
         Task {
@@ -119,20 +119,20 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
                 table: "sos_alerts", payload: alert, payloadType: .sosAlert
             )
             if success {
-                state       = .active
-                sendFailed  = false
+                state = .active
+                sendFailed = false
                 alertStatus = .active
                 sendLocalNotification(
                     title: "SOS Alert Sent",
-                    body:  "Your fleet manager has been notified of your emergency."
+                    body: "Your fleet manager has been notified of your emergency."
                 )
                 startStatusPolling()
             } else {
-                state      = .active
+                state = .active
                 sendFailed = true
                 sendLocalNotification(
                     title: "SOS Alert Queued",
-                    body:  "No network. Alert will be sent when connection is restored."
+                    body: "No network. Alert will be sent when connection is restored."
                 )
             }
             startLocationPings()
@@ -140,10 +140,12 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
     }
 
     public func deactivateSOS() {
-        pingTask?.cancel();       pingTask       = nil
-        statusPollTask?.cancel(); statusPollTask = nil
-        pingCount   = 0
-        sosAlertId  = nil
+        pingTask?.cancel()
+        pingTask = nil
+        statusPollTask?.cancel()
+        statusPollTask = nil
+        pingCount = 0
+        sosAlertId = nil
         alertStatus = .active
         endBackgroundTask()
         state = .idle
@@ -175,7 +177,7 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
 
     private func setupLocationManager() {
         locationManager = CLLocationManager()
-        locationManager?.delegate        = self
+        locationManager?.delegate = self
         locationManager?.desiredAccuracy = kCLLocationAccuracyBest
         locationManager?.requestWhenInUseAuthorization()
         locationManager?.startUpdatingLocation()
@@ -222,11 +224,11 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
 
         let ping = SOSLocationPing(
             sosAlertId: sosAlertId,
-            driverId:   driverId,
-            latitude:   location.coordinate.latitude,
-            longitude:  location.coordinate.longitude,
-            speed:      max(0, location.speed * 3.6),
-            timestamp:  Date()
+            driverId: driverId,
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude,
+            speed: max(0, location.speed * 3.6),
+            timestamp: Date()
         )
         Task {
             _ = await OfflineQueueService.shared.insertOrQueue(
@@ -267,20 +269,20 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
             do {
                 let response = try await SupabaseService.shared.client
                     .from("sos_alerts").select().eq("id", value: alertId).single().execute()
-                let alert          = try JSONDecoder.supabase().decode(SOSAlert.self, from: response.data)
+                let alert = try JSONDecoder.supabase().decode(SOSAlert.self, from: response.data)
                 let previousStatus = alertStatus
-                alertStatus        = alert.status
+                alertStatus = alert.status
 
                 if alert.status == .acknowledged && previousStatus == .active {
                     sendLocalNotification(
                         title: "Fleet Manager Aware",
-                        body:  "Your fleet manager has acknowledged your emergency."
+                        body: "Your fleet manager has acknowledged your emergency."
                     )
                 }
                 if alert.status == .resolved {
                     sendLocalNotification(
                         title: "SOS Resolved",
-                        body:  "Your fleet manager has resolved the emergency alert."
+                        body: "Your fleet manager has resolved the emergency alert."
                     )
                     statusPollTask?.cancel()
                     statusPollTask = nil
@@ -294,26 +296,26 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
     }
 
     private func sendLocalNotification(title: String, body: String) {
-        let content   = UNMutableNotificationContent()
+        let content = UNMutableNotificationContent()
         content.title = title
-        content.body  = body
+        content.body = body
         content.sound = .default
-        let request   = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 }
 
 public struct SOSLocationPing: Codable {
     public var sosAlertId: String?
-    public var driverId:   String
-    public var latitude:   Double
-    public var longitude:  Double
-    public var speed:      Double
-    public var timestamp:  Date
+    public var driverId: String
+    public var latitude: Double
+    public var longitude: Double
+    public var speed: Double
+    public var timestamp: Date
 
     enum CodingKeys: String, CodingKey {
         case sosAlertId = "sos_alert_id"
-        case driverId   = "driver_id"
+        case driverId = "driver_id"
         case latitude
         case longitude
         case speed
