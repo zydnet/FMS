@@ -45,21 +45,6 @@ struct FleetManagerHomeTab: View {
   @State private var sosExpanded: Bool = false
   @State private var isFetchingSOS = false
 
-  private let alerts: [(title: String, subtitle: String, timeAgo: String, type: AlertType)] = [
-    (
-      "Tyre pressure warning", "Truck #402 reported low pressure in rear-left tyre.", "12m ago",
-      .warning
-    ),
-    (
-      "Driver break scheduled", "Driver David R. is reaching mandatory rest limit in 15 mins.",
-      "45m ago", .info
-    ),
-    (
-      "Geofence deviation", "Truck #109 exited the designated route area in North District.",
-      "1h ago", .critical
-    ),
-  ]
-
   var body: some View {
     NavigationStack {
       ScrollView {
@@ -95,7 +80,9 @@ struct FleetManagerHomeTab: View {
           )
 
           // Recent Alerts Section
-          alertsSection
+          if viewModel.isRecentAlertsLoaded && !viewModel.recentAlerts.isEmpty {
+            alertsSection
+          }
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -114,6 +101,7 @@ struct FleetManagerHomeTab: View {
         startSOSPolling()
         Task {
           await viewModel.loadDashboardData()
+          await viewModel.loadRecentAlerts()
         }
       }
       .onDisappear {
@@ -253,15 +241,44 @@ struct FleetManagerHomeTab: View {
         .font(.system(size: 18, weight: .bold))
         .foregroundStyle(FMSTheme.textPrimary)
 
-      ForEach(alerts.indices, id: \.self) { index in
-        let alert = alerts[index]
+      ForEach(viewModel.recentAlerts) { alert in
         AlertRow(
-          title: alert.title,
-          subtitle: alert.subtitle,
-          timeAgo: alert.timeAgo,
-          type: alert.type
+          title: alertTitle(for: alert.type),
+          subtitle: alert.message,
+          timeAgo: alert.timestamp.formatted(.relative(presentation: .named)),
+          type: alertType(for: alert.type)
         )
       }
+    }
+  }
+
+  private func alertTitle(for type: String) -> String {
+    switch type.lowercased() {
+    case "maintenance_due":
+      return "Maintenance due"
+    case "document_expiry":
+      return "Document expiry"
+    case "break_violation":
+      return "Break violation"
+    case "geofence_entry":
+      return "Geofence entry"
+    case "geofence_exit":
+      return "Geofence exit"
+    case "crash_alert":
+      return "Crash alert"
+    default:
+      return "Fleet alert"
+    }
+  }
+
+  private func alertType(for type: String) -> AlertType {
+    switch type.lowercased() {
+    case "crash_alert":
+      return .critical
+    case "maintenance_due", "document_expiry", "break_violation", "geofence_exit":
+      return .warning
+    default:
+      return .info
     }
   }
 
@@ -278,6 +295,19 @@ private struct SOSAlertCard: View {
   let alert: SOSAlert
   var isLatest: Bool = false
   @Environment(\.openURL) private var openURL
+
+  private var sanitizedPhone: String? {
+    guard let raw = alert.driverPhoneNumber?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !raw.isEmpty
+    else {
+      return nil
+    }
+
+    let hasLeadingPlus = raw.hasPrefix("+")
+    let digits = raw.filter(\.isNumber)
+    guard !digits.isEmpty else { return nil }
+    return hasLeadingPlus ? "+\(digits)" : digits
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -338,11 +368,8 @@ private struct SOSAlertCard: View {
 
       // Call driver
       Button {
-        if let phone = alert.driverPhoneNumber, !phone.isEmpty {
-          let cleanedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
-          if let url = URL(string: "tel:\(cleanedPhone)") {
-            openURL(url)
-          }
+        if let sanitizedPhone, let url = URL(string: "tel:\(sanitizedPhone)") {
+          openURL(url)
         }
       } label: {
         HStack(spacing: 6) {
@@ -358,16 +385,8 @@ private struct SOSAlertCard: View {
         .cornerRadius(10)
       }
       .buttonStyle(.plain)
-      .disabled(
-        alert.driverPhoneNumber == nil
-          || alert.driverPhoneNumber?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ?? true
-      )
-      .opacity(
-        (alert.driverPhoneNumber == nil
-          || alert.driverPhoneNumber?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ?? true)
-          ? 0.5 : 1.0)
+      .disabled(sanitizedPhone == nil)
+      .opacity(sanitizedPhone == nil ? 0.5 : 1.0)
     }
     .padding(14)
     .background(statusColor.opacity(0.06))
