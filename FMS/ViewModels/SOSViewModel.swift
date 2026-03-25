@@ -54,7 +54,6 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
         countdownTargetDate = target
         state = .countdown(secondsRemaining: countdownDuration)
 
-        // Fix: Swift 6 Concurrency Migration away from Foundation.Timer
         countdownTask?.cancel()
         countdownTask = Task { @MainActor [weak self] in
             while let self = self {
@@ -176,27 +175,20 @@ public final class SOSViewModel: NSObject, CLLocationManagerDelegate {
         pingTask?.cancel()
         sendLocationPing()
 
-        // Fix: Swift 6 Concurrency Migration away from Foundation.Timer
         pingTask = Task { @MainActor [weak self] in
+            var interval: UInt64 = 10_000_000_000
+            
             while let self = self {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                try? await Task.sleep(nanoseconds: interval)
+                
                 if Task.isCancelled { break }
                 
                 self.pingCount += 1
                 self.sendLocationPing()
 
+                // Switch to 30-second intervals after 30 rapid pings (~5 mins)
                 if self.pingCount >= 30 {
-                    break // exit 10 sec loop to switch logic
-                }
-            }
-            
-            guard let self = self, !Task.isCancelled else { return }
-            
-            self.pingTask = Task { @MainActor [weak self] in
-                while let self = self {
-                    try? await Task.sleep(nanoseconds: 30_000_000_000)
-                    if Task.isCancelled { break }
-                    self.sendLocationPing()
+                    interval = 30_000_000_000
                 }
             }
         }
