@@ -61,9 +61,10 @@ public struct InspectionCompleteView: View {
 
                     Group {
                         if viewModel.checklist.inspectionType == .preTrip {
-                            Text("Your vehicle status has been updated to **\(viewModel.vehicleStatus)**\(viewModel.checklist.allPassed ? ". Have a safe trip!" : ". Please review flagged items.")")
+                            // Fix: Use inline Text interpolation to preserve both the iOS 26 standard and the formatting.
+                            Text("Your vehicle status has been updated to \(Text(viewModel.vehicleStatus).fontWeight(.bold))\(viewModel.checklist.allPassed ? ". Have a safe trip!" : ". Please review flagged items.")")
                         } else {
-                            Text("Post-trip inspection recorded. Vehicle status: **\(viewModel.vehicleStatus)**. Thank you for completing your trip safely.")
+                            Text("Post-trip inspection recorded. Vehicle status: \(Text(viewModel.vehicleStatus).fontWeight(.bold)). Thank you for completing your trip safely.")
                         }
                     }
                     .font(.system(size: 15))
