@@ -5,10 +5,10 @@ import VisionKit
 @MainActor
 @Observable
 final class DriverLicenseScannerViewModel {
-    var isProcessing     = false
+    var isProcessing = false
     var extractedResult: DriverLicenseScanResult?
-    var showError        = false
-    var errorMessage     = ""
+    var showError = false
+    var errorMessage = ""
 
     private let ocrService: DriverLicenseOCRServicing
 
@@ -18,15 +18,16 @@ final class DriverLicenseScannerViewModel {
 
     func process(scan: VNDocumentCameraScan) {
         isProcessing = true
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
-                let result   = try await ocrService.extract(from: scan)
-                extractedResult = result
+                let result = try await self.ocrService.extract(from: scan)
+                self.extractedResult = result
             } catch {
-                errorMessage = error.localizedDescription
-                showError    = true
+                self.errorMessage = error.localizedDescription
+                self.showError = true
             }
-            isProcessing = false
+            self.isProcessing = false
         }
     }
 }

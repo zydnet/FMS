@@ -7,7 +7,7 @@ import Network
 public enum QueuedPayloadType: String, Codable {
     case sosAlert = "sos_alert"
     case breakLog = "break_log"
-    case defect   = "defect"
+    case defect = "defect"
 }
 
 public struct QueuedPayload: Codable, Identifiable {
@@ -20,13 +20,13 @@ public struct QueuedPayload: Codable, Identifiable {
     public let recordId: String?
 
     public init(type: QueuedPayloadType, tableName: String, jsonData: Data, recordId: String? = nil) {
-        self.id         = UUID().uuidString
-        self.type       = type
-        self.tableName  = tableName
-        self.jsonData   = jsonData
-        self.createdAt  = Date()
+        self.id = UUID().uuidString
+        self.type = type
+        self.tableName = tableName
+        self.jsonData = jsonData
+        self.createdAt = Date()
         self.retryCount = 0
-        self.recordId   = recordId
+        self.recordId = recordId
     }
 }
 
@@ -36,8 +36,8 @@ public struct QueuedPayload: Codable, Identifiable {
 public final class OfflineQueueService {
     public static let shared = OfflineQueueService()
 
-    private let storageKey  = "fms_offline_queue"
-    private let maxRetries  = 5
+    private let storageKey = "fms_offline_queue"
+    private let maxRetries = 5
     private var networkMonitor: NWPathMonitor?
     private var isProcessing = false
 
@@ -99,7 +99,7 @@ public final class OfflineQueueService {
         guard !isProcessing else { return }
         isProcessing = true
 
-        let queue        = loadQueue()
+        let queue = loadQueue()
         var failedItems: [QueuedPayload] = []
 
         for var item in queue {
@@ -169,9 +169,9 @@ private struct AnyJSON: Encodable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        let dict      = try JSONSerialization.jsonObject(with: data)
+        let dict = try JSONSerialization.jsonObject(with: data)
         let reEncoded = try JSONSerialization.data(withJSONObject: dict)
-        let json      = try JSONDecoder().decode(AnyCodable.self, from: reEncoded)
+        let json = try JSONDecoder().decode(AnyCodable.self, from: reEncoded)
         try container.encode(json)
     }
 }
@@ -201,12 +201,13 @@ private struct AnyCodable: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch value {
-        case let s as String:               try container.encode(s)
-        case let n as Double:               try container.encode(n)
-        case let b as Bool:                 try container.encode(b)
+        case let n as Int: try container.encode(n)
+        case let n as Double: try container.encode(n)
+        case let s as String: try container.encode(s)
+        case let b as Bool: try container.encode(b)
         case let d as [String: AnyCodable]: try container.encode(d)
-        case let a as [AnyCodable]:         try container.encode(a)
-        default:                            try container.encodeNil()
+        case let a as [AnyCodable]: try container.encode(a)
+        default: try container.encodeNil()
         }
     }
 }
