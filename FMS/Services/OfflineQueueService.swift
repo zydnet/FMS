@@ -201,8 +201,9 @@ private struct AnyCodable: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch value {
-        case let s as String:               try container.encode(s)
+        case let n as Int:                  try container.encode(n)
         case let n as Double:               try container.encode(n)
+        case let s as String:               try container.encode(s)
         case let b as Bool:                 try container.encode(b)
         case let d as [String: AnyCodable]: try container.encode(d)
         case let a as [AnyCodable]:         try container.encode(a)
