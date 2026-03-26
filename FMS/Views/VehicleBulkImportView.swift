@@ -9,11 +9,44 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - CSV Template Document
+struct CSVTemplateDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+    static var writableContentTypes: [UTType] { [.commaSeparatedText] }
+    
+    var text: String
+
+    init(text: String = "plate_number,manufacturer,model,fuel_type,fuel_tank_capacity,carrying_capacity,status\n") {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents,
+           let string = String(data: data, encoding: .utf8) {
+            text = string
+        } else {
+            throw CocoaError(.fileReadUnknown)
+        }
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        let data = Data(text.utf8)
+        return .init(regularFileWithContents: data)
+    }
+}
+
+// MARK: - Main View
 public struct VehicleBulkImportView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = VehicleBulkImportViewModel()
-    @State private var showingFilePicker = false
     
+    @State private var showingFilePicker = false
+    @State private var showingExporter = false
+    
+    // 1. FIXED: Hold the document in a stable @State variable
+    @State private var templateDocument = CSVTemplateDocument()
+    
+    // Callback to refresh the main fleet view when done
     public var onImportComplete: (() -> Void)?
     
     public init(onImportComplete: (() -> Void)? = nil) {
@@ -41,6 +74,7 @@ public struct VehicleBulkImportView: View {
                         .foregroundColor(FMSTheme.textSecondary)
                 }
             }
+            // Trigger the native iOS Document Picker for uploading
             .fileImporter(
                 isPresented: $showingFilePicker,
                 allowedContentTypes: [.commaSeparatedText],
@@ -55,6 +89,21 @@ public struct VehicleBulkImportView: View {
                     viewModel.errorMessage = error.localizedDescription
                 }
             }
+            // Trigger the native iOS Document Exporter for downloading the template
+            .fileExporter(
+                isPresented: $showingExporter,
+                document: templateDocument,
+                contentType: .commaSeparatedText,
+                defaultFilename: "Vehicle_Import_Template.csv"
+            ) { result in
+                switch result {
+                case .success(_):
+                    // Optional: Show a success toast here if you like
+                    break
+                case .failure(let error):
+                    viewModel.errorMessage = "Failed to save template: \(error.localizedDescription)"
+                }
+            }
             .alert("Import Error", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
@@ -66,42 +115,69 @@ public struct VehicleBulkImportView: View {
         }
     }
     
-    // MARK: - Instruction State
+    // MARK: - Instruction State (UX Revamp)
     private var instructionState: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             Spacer()
             
-            Image(systemName: "doc.text.magnifyingglass")
+            Image(systemName: "list.bullet.clipboard.fill")
                 .font(.system(size: 60))
                 .foregroundColor(FMSTheme.amber)
             
-            VStack(spacing: 8) {
-                Text("Upload a CSV Template")
+            VStack(spacing: 16) {
+                Text("Import Multiple Vehicles")
                     .font(.title2.weight(.bold))
                     .foregroundColor(FMSTheme.textPrimary)
                 
-                Text("Ensure your CSV includes the following column headers:\nplate_number, manufacturer, model, fuel_type, status")
-                    .font(.subheadline)
-                    .foregroundColor(FMSTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                VStack(alignment: .leading, spacing: 14) {
+                    Label("1. Download the blank CSV template.", systemImage: "arrow.down.doc.fill")
+                    Label("2. Add your fleet data to the file.", systemImage: "pencil.and.list.clipboard")
+                    Label("3. Upload the completed file here.", systemImage: "icloud.and.arrow.up.fill")
+                }
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(FMSTheme.textSecondary)
+                .padding(.top, 8)
             }
             
-            Button {
-                showingFilePicker = true
-            } label: {
-                HStack {
-                    Image(systemName: "folder.fill")
-                    Text("Select CSV File")
-                        .fontWeight(.bold)
+            VStack(spacing: 16) {
+                // Step 1: Download Template
+                Button {
+                    showingExporter = true
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                        Text("Download Template")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(FMSTheme.amber)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(FMSTheme.amber.opacity(0.15))
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(FMSTheme.amber.opacity(0.3), lineWidth: 1)
+                    )
                 }
-                .foregroundColor(FMSTheme.obsidian)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(FMSTheme.amber)
-                .cornerRadius(14)
-                .padding(.horizontal, 24)
+                
+                // Step 3: Upload File
+                Button {
+                    showingFilePicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "folder.fill")
+                        Text("Select Completed CSV")
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(FMSTheme.obsidian)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(FMSTheme.amber)
+                    .cornerRadius(14)
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
             
             Spacer()
         }
