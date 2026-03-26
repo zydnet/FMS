@@ -214,7 +214,9 @@ struct DriverTripDetailView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        if trip.status?.lowercased() == "scheduled" {
+        let normalizedStatus = trip.status?.lowercased() ?? ""
+
+        if normalizedStatus == "scheduled" {
             Button {
                 preTripInspectionCompleted = false
                 showPreTripInspection = true
@@ -229,7 +231,7 @@ struct DriverTripDetailView: View {
             .buttonStyle(.fmsPrimary)
         }
 
-        if trip.status?.lowercased() == "active" {
+        if ["active", "in_progress", "in_transit", "ongoing"].contains(normalizedStatus) {
             Button {
                 postTripInspectionCompleted = false
                 showPostTripInspection = true

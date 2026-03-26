@@ -48,6 +48,8 @@ public struct MaintenanceManagerView: View {
                                 }
                             }
                             
+                            searchBar
+                            
                             statusSummarySection
                             statusFilterSection
                             vehicleListSection
@@ -59,7 +61,6 @@ public struct MaintenanceManagerView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search vehicle...")
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingSettings, onDismiss: {
                 Task { try? await fleetViewModel.fetchVehicles() }
@@ -224,5 +225,35 @@ public struct MaintenanceManagerView: View {
                 defaultKm: settingsStore.intervalKmDouble
             ) == .ok 
         }.count
+    }
+    
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(FMSTheme.textSecondary)
+                .font(.system(size: 16, weight: .semibold))
+            
+            TextField("Search vehicle...", text: $searchText)
+                .font(.system(size: 16))
+                .foregroundStyle(FMSTheme.textPrimary)
+                .autocorrectionDisabled()
+            
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(FMSTheme.textTertiary)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(FMSTheme.cardBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(FMSTheme.borderLight, lineWidth: 1)
+        )
     }
 }

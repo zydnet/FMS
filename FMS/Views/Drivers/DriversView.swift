@@ -48,6 +48,10 @@ public struct DriversView: View {
             .padding(.top, 4)
             .padding(.bottom, 8)
             
+            searchBar
+              .padding(.horizontal, 16)
+              .padding(.bottom, 12)
+            
             // Dense header matching the dashboard style
             DriversSummaryHeader(vm: vm)
               .padding(.horizontal, 16)
@@ -84,7 +88,6 @@ public struct DriversView: View {
       }
       .navigationTitle("")
       .navigationBarTitleDisplayMode(.inline)
-      .searchable(text: $vm.searchText, prompt: "Search driver name or ID")
       .toolbar(.hidden, for: .navigationBar)
       .sheet(isPresented: $showingAddDriver) {
         AddDriverView(onDriverAdded: {
@@ -93,6 +96,36 @@ public struct DriversView: View {
         .presentationDetents([.large])
       }
     }
+  }
+
+  private var searchBar: some View {
+    HStack(spacing: 12) {
+      Image(systemName: "magnifyingglass")
+        .foregroundStyle(FMSTheme.textSecondary)
+        .font(.system(size: 16, weight: .semibold))
+      
+      TextField("Search driver name or ID", text: $vm.searchText)
+        .font(.system(size: 16))
+        .foregroundStyle(FMSTheme.textPrimary)
+        .autocorrectionDisabled()
+      
+      if !vm.searchText.isEmpty {
+        Button {
+          vm.searchText = ""
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundStyle(FMSTheme.textTertiary)
+        }
+      }
+    }
+    .padding(.horizontal, 14)
+    .padding(.vertical, 12)
+    .background(FMSTheme.cardBackground)
+    .cornerRadius(12)
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(FMSTheme.borderLight, lineWidth: 1)
+    )
   }
 }
 

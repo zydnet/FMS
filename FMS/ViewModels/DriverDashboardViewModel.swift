@@ -201,10 +201,13 @@ public final class DriverDashboardViewModel {
             
             if let jobId = self.currentJob?.id {
                 await fetchAlerts(tripId: jobId)
+            } else {
+                self.alerts = []
             }
 
         } catch {
             print("Failed to fetch driver dashboard: \(error)")
+            self.alerts = []
             self.errorMessage = error.localizedDescription
         }
         self.isLoading = false

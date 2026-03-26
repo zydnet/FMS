@@ -165,6 +165,7 @@ struct FleetManagerHomeTab: View {
             alert: latest,
             isLatest: true
           )
+          .id(latest.id)
         }
       }
       .padding(.top, 10)
@@ -234,7 +235,12 @@ struct FleetManagerHomeTab: View {
       }
       .buttonStyle(.plain)
 
-      if alertsExpanded {
+      if viewModel.recentAlerts.isEmpty {
+        Text("No recent alerts.")
+          .font(.system(size: 14))
+          .foregroundStyle(FMSTheme.textTertiary)
+          .padding(.top, 4)
+      } else if alertsExpanded {
         VStack(spacing: 12) {
           ForEach(viewModel.recentAlerts) { alert in
             SwipeableAlertRow(
@@ -260,11 +266,7 @@ struct FleetManagerHomeTab: View {
             Task { await viewModel.deleteNotification(id: latest.id) }
           }
         )
-      } else {
-        Text("No recent alerts.")
-          .font(.system(size: 14))
-          .foregroundStyle(FMSTheme.textTertiary)
-          .padding(.top, 4)
+        .id(latest.id)
       }
     }
   }
@@ -513,6 +515,7 @@ private struct SwipeableAlertRow: View {
     @State private var offset: CGFloat = 0
     @State private var isSwiped: Bool = false
     @State private var willDelete: Bool = false
+    @State private var didTriggerRevealHaptic: Bool = false
     
     private let buttonWidth: CGFloat = 80
     
@@ -541,9 +544,12 @@ private struct SwipeableAlertRow: View {
                             }
                             
                             // Subtle haptic when crossing the reveal threshold
-                            if !isSwiped && swipe < -buttonWidth / 2 {
+                            if !didTriggerRevealHaptic && swipe < -buttonWidth / 2 {
                                 let generator = UIImpactFeedbackGenerator(style: .light)
                                 generator.impactOccurred(intensity: 0.6)
+                                didTriggerRevealHaptic = true
+                            } else if swipe >= -buttonWidth / 2 {
+                                didTriggerRevealHaptic = false
                             }
                         } else if isSwiped {
                             let newOffset = -buttonWidth + swipe
@@ -553,6 +559,7 @@ private struct SwipeableAlertRow: View {
                     .onEnded { value in
                         let velocity = value.velocity.width
                         let shouldSwipe = value.translation.width < -buttonWidth / 2 || velocity < -300
+                        didTriggerRevealHaptic = false
                         
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85, blendDuration: 0)) {
                             if shouldSwipe {

@@ -50,6 +50,10 @@ public struct FleetManagementView: View {
                             }
                             .padding(.horizontal, 20)
                             
+                            // Custom Search Bar (replaces native searchable since nav bar is hidden)
+                            searchBar
+                                .padding(.horizontal, 20)
+                            
                             summaryCardSection
                             
                             VStack(spacing: 16) {
@@ -106,11 +110,41 @@ public struct FleetManagementView: View {
             .navigationDestination(item: $trackingTrip) { trip in
                 TripReplayView(trip: trip)
             }
-            .searchable(text: $viewModel.searchText, prompt: "Search plate, make, or model")
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
         }
+    }
+    
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(FMSTheme.textSecondary)
+                .font(.system(size: 16, weight: .semibold))
+            
+            TextField("Search plate, make, or model", text: $viewModel.searchText)
+                .font(.system(size: 16))
+                .foregroundStyle(FMSTheme.textPrimary)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+            
+            if !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(FMSTheme.textTertiary)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(FMSTheme.cardBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(FMSTheme.borderLight, lineWidth: 1)
+        )
     }
     
     private var filterSection: some View {

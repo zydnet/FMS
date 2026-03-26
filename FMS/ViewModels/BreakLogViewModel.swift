@@ -233,7 +233,12 @@ public final class BreakLogViewModel: NSObject, CLLocationManagerDelegate {
                 } else {
                     // It's an ongoing break for a DIFFERENT trip or context.
                     // We should NOT show it as active for the current context.
+                    timer?.invalidate()
+                    timer = nil
                     self.isOnBreak = false
+                    self.currentBreakStartTime = nil
+                    self.currentBreakId = nil
+                    self.currentBreakElapsedSeconds = 0
                 }
             } else {
                 // Server confirms no ongoing break — clear any stale local state
