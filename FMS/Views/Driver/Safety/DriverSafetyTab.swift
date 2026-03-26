@@ -9,27 +9,30 @@ struct DriverSafetyTab: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    headerSection
-
-                    if hasActiveTrip {
-                        breakLoggingSection
-                    } else {
-                        noActiveTripCard
+            ZStack {
+                FMSTheme.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        headerSection
+                        
+                        if hasActiveTrip {
+                            breakLoggingSection
+                        } else {
+                            noActiveTripCard
+                        }
+                        
+                        safetyEventsSection
                     }
-
-                    safetyEventsSection
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
             .refreshable {
                 await breakLogViewModel.fetchBreakHistory()
                 safetyViewModel.checkFatigueWarnings()
             }
-            .background(FMSTheme.backgroundPrimary)
         }
     }
 

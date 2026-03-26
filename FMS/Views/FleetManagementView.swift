@@ -18,15 +18,41 @@ public struct FleetManagementView: View {
                 FMSTheme.backgroundPrimary.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Header
-                    headerSection
-                    
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            HStack {
+                                Text("Fleet Management")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(FMSTheme.textPrimary)
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 12) {
+                                    Button {
+                                        showingBulkImport = true
+                                    } label: {
+                                        Image(systemName: "doc.badge.plus")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(FMSTheme.textPrimary)
+                                    }
+                                    
+                                    Button {
+                                        showingAddVehicle = true
+                                    } label: {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 20, weight: .bold))
+                                            .padding(8)
+                                            .background(FMSTheme.amber.opacity(0.12))
+                                            .clipShape(Circle())
+                                            .foregroundStyle(FMSTheme.amber)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            
                             summaryCardSection
                             
                             VStack(spacing: 16) {
-                                searchBarSection
                                 filterSection
                             }
                             
@@ -80,89 +106,13 @@ public struct FleetManagementView: View {
             .navigationDestination(item: $trackingTrip) { trip in
                 TripReplayView(trip: trip)
             }
+            .searchable(text: $viewModel.searchText, prompt: "Search plate, make, or model")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
     
-    private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Fleet Management")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(FMSTheme.textPrimary)
-                
-                Text("\(viewModel.vehicles.count) Total Vehicles")
-                    .font(.system(size: 14))
-                    .foregroundColor(FMSTheme.textSecondary)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 12) {
-                // Bulk Import Button
-                Button {
-                    showingBulkImport = true
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(FMSTheme.cardBackground)
-                            .frame(width: 44, height: 44)
-                            .overlay(Circle().stroke(FMSTheme.borderLight, lineWidth: 1))
-                            .shadow(color: FMSTheme.shadowSmall, radius: 4, x: 0, y: 2)
-                        
-                        Image(systemName: "doc.badge.plus")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(FMSTheme.textPrimary)
-                    }
-                }
-                
-                // Add Single Vehicle Button
-                Button {
-                    showingAddVehicle = true
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(FMSTheme.amber)
-                            .frame(width: 44, height: 44)
-                            .shadow(color: FMSTheme.amber.opacity(0.3), radius: 8, x: 0, y: 4)
-                        
-                        Image(systemName: "plus")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(FMSTheme.obsidian)
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-    }
-    
-    private var searchBarSection: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16))
-                .foregroundColor(FMSTheme.textTertiary)
-            
-            TextField("Search plate, make, or model", text: $viewModel.searchText)
-                .font(.system(size: 15))
-                .foregroundColor(FMSTheme.textPrimary)
-                .autocorrectionDisabled()
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.searchText)
-            
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(FMSTheme.cardBackground.opacity(0.5))
-        .fmsGlassEffect(cornerRadius: 12)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(FMSTheme.textPrimary.opacity(0.1), lineWidth: 1)
-        )
-        .shadow(color: FMSTheme.shadowSmall, radius: 4, x: 0, y: 2)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
-    }
     private var filterSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {

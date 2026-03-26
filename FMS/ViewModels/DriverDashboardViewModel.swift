@@ -155,8 +155,7 @@ public final class DriverDashboardViewModel {
                     availabilityStatus: currentStatus
                 )
                 
-                // Fetch break logs explicitly for this driver to populate history and resume any active breaks
-                await self.breakLogViewModel.loadBreaks(driverId: currentUserId)
+                // Fetch break logs explicitly for this driver — moved below activeTrip determination
             }
 
             let allTrips: [Trip] = try await SupabaseService.shared.client
@@ -179,12 +178,14 @@ public final class DriverDashboardViewModel {
                 .filter { completedStatuses.contains($0.status?.lowercased() ?? "") }
                 .sorted { ($0.endTime ?? Date.distantPast) > ($1.endTime ?? Date.distantPast) }
 
-            // Resume pinging if there is an active trip on app launch
             if let active = self.activeTrip {
                 print("[DriverDashboard] Resuming active trip \(active.id) on launch — starting ping service")
                 locationManager.startUpdating()
                 pingService.start(tripId: active.id)
             }
+
+            // Fetch break logs explicitly for this driver, scoped to the active trip if available
+            await self.breakLogViewModel.loadBreaks(driverId: currentUserId, tripId: self.activeTrip?.id)
 
             if let vehicleId = activeTrip?.vehicleId ?? upcomingTrips.first?.vehicleId {
                 let vehicles: [Vehicle] = try await SupabaseService.shared.client
@@ -286,6 +287,10 @@ public final class DriverDashboardViewModel {
                     .from("trips").update(update).eq("id", value: trip.id).execute()
 
                 print("[DriverDashboard] Trip persisted as completed — stopping ping service")
+                
+                // Ensure any active break is also ended when the trip is completed
+                self.breakLogViewModel.endBreak()
+
                 pingService.stop()
                 locationManager.stopUpdating()
 

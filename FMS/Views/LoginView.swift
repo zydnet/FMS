@@ -80,12 +80,13 @@ public struct LoginView: View {
                         // Email
                         
                         TextField("Email", text: $email)
-                            .padding()
+                            .foregroundColor(FMSTheme.textPrimary)
+                            .padding(.horizontal, 16)
+                            .frame(height: 56)
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
                                     .fill(FMSTheme.pillBackground)
                             )
-                            .foregroundColor(FMSTheme.textPrimary)
                             .textInputAutocapitalization(.never)
                             .keyboardType(.emailAddress)
                         
@@ -107,7 +108,6 @@ public struct LoginView: View {
                                     isPasswordVisible.toggle()
                                 }
                             }) {
-                                // Corrected UX mapping: Open eye when visible, slashed eye when hidden
                                 Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(isPasswordVisible ? FMSTheme.amber : FMSTheme.textSecondary)
@@ -117,13 +117,13 @@ public struct LoginView: View {
                             .buttonStyle(.plain)
                             .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
                         }
-                        .padding()
+                        .foregroundColor(FMSTheme.textPrimary)
+                        .padding(.horizontal, 16)
+                        .frame(height: 56)
                         .background(
                             RoundedRectangle(cornerRadius: 14)
                                 .fill(FMSTheme.pillBackground)
-                        )
-                        .foregroundColor(FMSTheme.textPrimary)
-                        
+                        )             
                         
                         // Login Button
                         

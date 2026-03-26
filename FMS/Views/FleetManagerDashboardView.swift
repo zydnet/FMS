@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import MapKit
 
 public struct FleetManagerDashboardView: View {
     public init() {}
@@ -46,44 +47,47 @@ struct FleetManagerHomeTab: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          // Header
-          headerSection
-
-          FleetStatusCard(
-            activeCount: viewModel.activeVehicleCount,
-            subtitle: "Vehicles in transit",
-            onViewMap: {
-              navigateToLiveFleet = true
-            }
-          )
-
-          // Quick Actions
-          QuickActionCard(
-            icon: "shippingbox.fill",
-            title: "Orders",
-            subtitle:
-              viewModel.pendingOrderCount > 0
+      ZStack {
+        FMSTheme.backgroundPrimary.ignoresSafeArea()
+        
+        ScrollView {
+          VStack(alignment: .leading, spacing: 20) {
+            // Header
+            headerSection
+            
+            FleetStatusCard(
+              activeCount: viewModel.activeVehicleCount,
+              subtitle: "Vehicles in transit",
+              onViewMap: {
+                navigateToLiveFleet = true
+              }
+            )
+            
+            // Quick Actions
+            QuickActionCard(
+              icon: "shippingbox.fill",
+              title: "Orders",
+              subtitle:
+                viewModel.pendingOrderCount > 0
               ? "\(viewModel.pendingOrderCount) pending orders"
               : "Manage fleet orders and dispatch",
-            action: {
-              navigateToOrders = true
+              action: {
+                navigateToOrders = true
+              }
+            )
+            
+            // Active SOS Alerts — repositioned below Orders
+            if !viewModel.activeSOSAlerts.isEmpty {
+              sosAlertsSection
             }
-          )
-
-          // Active SOS Alerts — repositioned below Orders
-          if !viewModel.activeSOSAlerts.isEmpty {
-            sosAlertsSection
+            
+            // Recent Alerts Section
+            alertsSection
           }
-
-          // Recent Alerts Section
-          alertsSection
+          .padding(.horizontal, 20)
+          .padding(.top, 16)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
       }
-      .background(FMSTheme.backgroundPrimary)
       .navigationDestination(isPresented: $navigateToLiveFleet) {
         LiveVehicleDashboardView()
       }
@@ -448,32 +452,24 @@ private struct SOSAlertCard: View {
   }
 
   private func reverseGeocode() async {
-    let geocoder = CLGeocoder()
     let location = CLLocation(latitude: alert.latitude, longitude: alert.longitude)
+    guard let request = MKReverseGeocodingRequest(location: location) else { return }
     
     do {
-      let placemarks = try await geocoder.reverseGeocodeLocation(location)
-      if let placemark = placemarks.first {
-        let street = placemark.thoroughfare ?? ""
-        let subLocality = placemark.subLocality ?? ""
-        let locality = placemark.locality ?? ""
-        
-        var address = ""
-        if !street.isEmpty { address += street }
-        if !subLocality.isEmpty { 
-          address += (address.isEmpty ? "" : ", ") + subLocality 
-        }
-        if !locality.isEmpty {
-          address += (address.isEmpty ? "" : ", ") + locality
-        }
-        
-        if address.isEmpty {
-          self.locationAddress = "Unknown location"
-        } else {
+      let mapItems = try await request.mapItems
+
+
+      if let item = mapItems.first {
+        if let address = item.addressRepresentations?.fullAddress(includingRegion: false, singleLine: true) {
           self.locationAddress = address
+        } else if let shortAddress = item.address?.shortAddress {
+          self.locationAddress = shortAddress
+        } else {
+          self.locationAddress = "Unknown location"
         }
       }
     } catch {
+
       self.locationAddress = "Location unavailable"
     }
   }

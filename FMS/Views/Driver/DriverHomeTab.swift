@@ -19,22 +19,25 @@ struct DriverHomeTab: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    headerSection
-                    currentJobSection
-                    upcomingJobsSection
-                    geofenceAlertsSection
-                    quickActionsSection
+            ZStack {
+                FMSTheme.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        headerSection
+                        currentJobSection
+                        upcomingJobsSection
+                        geofenceAlertsSection
+                        quickActionsSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
             .refreshable {
                 await viewModel.fetchLiveDashboardData()
             }
-            .background(FMSTheme.backgroundPrimary)
             .fullScreenCover(isPresented: $showPreTripInspection) {
                 InspectionChecklistView(
                     type: .preTrip,

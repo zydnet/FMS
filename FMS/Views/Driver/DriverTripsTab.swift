@@ -6,29 +6,32 @@ struct DriverTripsTab: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    headerSection
-                    
-                    Picker("", selection: $viewModel.selectedSegment) {
-                        ForEach(TripSegment.allCases, id: \.self) { segment in
-                            Text(segment.rawValue).tag(segment)
+            ZStack {
+                FMSTheme.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        headerSection
+                        
+                        Picker("", selection: $viewModel.selectedSegment) {
+                            ForEach(TripSegment.allCases, id: \.self) { segment in
+                                Text(segment.rawValue).tag(segment)
+                            }
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-
-                    switch viewModel.selectedSegment {
-                    case .upcoming:
-                        upcomingContent
-                    case .history:
-                        historyContent
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                        
+                        switch viewModel.selectedSegment {
+                        case .upcoming:
+                            upcomingContent
+                        case .history:
+                            historyContent
+                        }
                     }
                 }
             }
-            .background(FMSTheme.backgroundPrimary)
             .navigationDestination(item: $selectedTrip) { trip in
                 NewTripAssignmentView(trip: trip, viewModel: viewModel)
             }

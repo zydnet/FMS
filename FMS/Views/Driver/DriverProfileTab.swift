@@ -21,19 +21,22 @@ struct DriverProfileTab: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    profileHeader
-                    documentsSection
-                    securitySection
-                    vehicleCard
-                    logoutButton
+            ZStack {
+                FMSTheme.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        profileHeader
+                        documentsSection
+                        securitySection
+                        vehicleCard
+                        logoutButton
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
-            .background(FMSTheme.backgroundPrimary)
             .sheet(isPresented: $showDocumentPicker) {
                 documentUploadSheet
             }
