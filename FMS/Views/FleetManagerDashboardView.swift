@@ -51,29 +51,11 @@ struct FleetManagerHomeTab: View {
           // Header
           headerSection
 
-          // Fleet Status Card
           FleetStatusCard(
             activeCount: viewModel.activeVehicleCount,
             subtitle: "Vehicles in transit",
             onViewMap: {
               navigateToLiveFleet = true
-            }
-            .background(FMSTheme.backgroundPrimary)
-            .navigationDestination(isPresented: $navigateToLiveFleet) {
-                LiveVehicleDashboardView()
-            }
-            .navigationDestination(isPresented: $navigateToProfile) {
-                ManagerProfileView()
-            }
-            .navigationDestination(isPresented: $navigateToOrders) {
-                OrdersListView()
-            }
-            .onAppear {
-                startSOSPolling()
-            }
-            .onDisappear {
-                sosPollingTimer?.invalidate()
-                sosPollingTimer = nil
             }
           )
 
@@ -167,6 +149,8 @@ struct FleetManagerHomeTab: View {
             isLatest: true
           )
         }
+      }
+      .padding(.top, 10)
     }
   }
 
@@ -196,6 +180,8 @@ struct FleetManagerHomeTab: View {
             .font(.system(size: 44))
             .foregroundStyle(FMSTheme.amber)
         }
+      }
+      .buttonStyle(.plain)
     }
   }
 
@@ -264,6 +250,7 @@ struct FleetManagerHomeTab: View {
           .padding(.top, 4)
       }
     }
+  }
 
   private func alertTitle(for alert: Notification) -> String {
     switch alert.type?.lowercased() {
@@ -359,14 +346,6 @@ private struct SOSAlertCard: View {
           .foregroundStyle(FMSTheme.textSecondary)
           .padding(.top, 2)
         }
-        .padding(14)
-        .background(statusColor.opacity(0.06))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(statusColor.opacity(0.4), lineWidth: 1.5)
-        )
-    }
 
         Spacer()
 
@@ -493,12 +472,14 @@ private struct SOSAlertCard: View {
     case .resolved: return FMSTheme.alertGreen
     case .cancelled: return FMSTheme.textTertiary
     }
+  }
 
-    private var timeAgoText: String {
-        let seconds = Int(Date().timeIntervalSince(alert.timestamp))
-        if seconds < 60 { return "Just now" }
-        if seconds < 3600 { return "\(seconds / 60)m ago" }
-        return "\(seconds / 3600)h ago"
+  private var statusLabel: String {
+    switch alert.status {
+    case .active: return "EMERGENCY SOS"
+    case .acknowledged: return "SOS — ACKNOWLEDGED"
+    case .resolved: return "SOS — RESOLVED"
+    case .cancelled: return "SOS — CANCELLED"
     }
   }
 
