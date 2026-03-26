@@ -130,9 +130,9 @@ public struct VehicleBulkImportView: View {
             }
             
             VStack(alignment: .leading, spacing: 20) {
-                instructionRow(number: "1", title: "Download Template", desc: "Get the pre-formatted CSV file.")
-                instructionRow(number: "2", title: "Add Your Data", desc: "Fill in plate numbers, models, etc.")
-                instructionRow(number: "3", title: "Upload & Verify", desc: "Select the file below to review.")
+                instructionRow(number: "1", title: "Download Template", desc: "Get the pre-formatted CSV file")
+                instructionRow(number: "2", title: "Add Your Data", desc: "Fill in plate numbers, models, etc")
+                instructionRow(number: "3", title: "Upload & Verify", desc: "Select the file below to review")
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -153,6 +153,10 @@ public struct VehicleBulkImportView: View {
                     .padding(.vertical, 16)
                     .background(FMSTheme.amber.opacity(0.15))
                     .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(FMSTheme.amber.opacity(0.3), lineWidth: 1)
+                    )
                 }
                 
                 Button {
@@ -198,7 +202,7 @@ public struct VehicleBulkImportView: View {
         }
     }
     
-    // MARK: - Preview State (Editable)
+    // MARK: - Preview State (Isolated Cards)
     private var previewState: some View {
         VStack(spacing: 0) {
             // Summary Banner
@@ -218,49 +222,29 @@ public struct VehicleBulkImportView: View {
             
             Divider()
             
-            // Editable List
-            List {
-                ForEach($viewModel.parsedVehicles) { $vehicle in
-                    VStack(alignment: .leading, spacing: 12) {
-                        
-                        // Row 1: Primary identifiers
-                        HStack(spacing: 12) {
-                            labeledField(title: "Plate Number *", text: $vehicle.plate_number)
-                            labeledField(title: "Chassis Number *", text: $vehicle.chassis_number)
-                        }
-                        
-                        // Row 2: Secondary required metrics
-                        HStack(spacing: 12) {
-                            labeledField(title: "Purchase Date *", text: $vehicle.purchase_date)
-                            labeledField(title: "Odometer *", text: $vehicle.odometer, keyboardType: .decimalPad)
-                        }
-                        
-                        Divider().padding(.vertical, 4)
-                        
-                        // Row 3: Optional info
-                        HStack(spacing: 12) {
-                            labeledField(title: "Make (Opt)", text: $vehicle.manufacturer, isRequired: false)
-                            labeledField(title: "Model (Opt)", text: $vehicle.model, isRequired: false)
-                            labeledField(title: "Type (Opt)", text: $vehicle.fuel_type, isRequired: false)
-                        }
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    let indices = viewModel.parsedVehicles.indices
+                    ForEach(Array(indices), id: \.self) { index in
+                        vehicleCard(index: index)
                     }
-                    .padding(.vertical, 8)
                 }
+                .padding(20)
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
+            .background(FMSTheme.backgroundPrimary)
             
             // Confirm Button
             VStack {
                 Button {
                     if viewModel.hasValidationErrors {
                         bannerManager.show(type: .error, message: "Cannot import. Please fill in all required fields marked in red.")
+                    } else if viewModel.parsedVehicles.isEmpty {
+                        bannerManager.show(type: .warning, message: "No vehicles to import.")
                     } else {
                         Task {
                             do {
                                 let result = try await viewModel.uploadVehicles()
                                 
-                                // Smart Toast Messaging based on outcome
                                 if result.inserted > 0 && result.skipped > 0 {
                                     bannerManager.show(type: .success, message: "Added \(result.inserted) new vehicles. Skipped \(result.skipped) already existing.")
                                 } else if result.inserted > 0 {
@@ -289,16 +273,82 @@ public struct VehicleBulkImportView: View {
                     .foregroundColor(FMSTheme.obsidian)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(viewModel.hasValidationErrors ? FMSTheme.amber.opacity(0.5) : FMSTheme.amber)
+                    .background(viewModel.hasValidationErrors || viewModel.parsedVehicles.isEmpty ? FMSTheme.amber.opacity(0.5) : FMSTheme.amber)
                     .cornerRadius(14)
                 }
-                .disabled(viewModel.isUploading)
+                .disabled(viewModel.isUploading || viewModel.parsedVehicles.isEmpty)
                 .padding()
             }
             .background(FMSTheme.backgroundPrimary)
+            .overlay(Divider(), alignment: .top)
         }
     }
-    
+
+    // MARK: - Vehicle Card
+    @ViewBuilder
+    private func vehicleCard(index: Int) -> some View {
+        // Guard against out-of-bounds during animated deletion
+        if index < viewModel.parsedVehicles.count {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // Card Header
+                HStack {
+                    Text("Vehicle Entry \(index + 1)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(FMSTheme.textSecondary)
+                        .textCase(.uppercase)
+                        .tracking(1)
+
+                    Spacer()
+
+                    Button {
+                        withAnimation {
+                            // FIXED: Add `_ = ` to discard the result and resolve Swift's closure ambiguity
+                            _ = viewModel.parsedVehicles.remove(at: index)
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(FMSTheme.alertRed.opacity(0.8))
+                            .padding(6)
+                            .background(FMSTheme.alertRed.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+                Divider().background(FMSTheme.borderLight)
+
+                // Editable Fields
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        labeledField(title: "Plate Number *",  text: $viewModel.parsedVehicles[index].plate_number)
+                        labeledField(title: "Chassis Number *", text: $viewModel.parsedVehicles[index].chassis_number)
+                    }
+                    HStack(spacing: 12) {
+                        labeledField(title: "Purchase Date *", text: $viewModel.parsedVehicles[index].purchase_date)
+                        labeledField(title: "Odometer *",      text: $viewModel.parsedVehicles[index].odometer, keyboardType: .decimalPad)
+                    }
+                    HStack(spacing: 12) {
+                        labeledField(title: "Make (Opt)",  text: $viewModel.parsedVehicles[index].manufacturer, isRequired: false)
+                        labeledField(title: "Model (Opt)", text: $viewModel.parsedVehicles[index].model,        isRequired: false)
+                        labeledField(title: "Type (Opt)",  text: $viewModel.parsedVehicles[index].fuel_type,    isRequired: false)
+                    }
+                }
+                .padding(16)
+            }
+            .background(FMSTheme.cardBackground)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(FMSTheme.borderLight, lineWidth: 1)
+            )
+            .shadow(color: FMSTheme.shadowSmall.opacity(0.5), radius: 5, x: 0, y: 2)
+        }
+    }
+
     // MARK: - Reusable UI component for Structured Fields
     @ViewBuilder
     private func labeledField(title: String, text: Binding<String>, isRequired: Bool = true, keyboardType: UIKeyboardType = .default) -> some View {
