@@ -24,14 +24,7 @@ public struct DriversView: View {
               Spacer()
               
               HStack(spacing: 12) {
-                Button {
-                  // Bulk add action
-                } label: {
-                  Image(systemName: "doc.badge.plus")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(FMSTheme.textSecondary)
-                }
-                
+
                 Button {
                   showingAddDriver = true
                 } label: {
